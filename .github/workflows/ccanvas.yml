@@ -26,7 +26,7 @@ jobs:
         pip install canvasapi
     - name: Run
       run: |
-        python ccanvas.py > report.txt
+        python console.py --all > report.txt
     - name: Upload daily report
       uses: actions/upload-artifact@v1
       with:
