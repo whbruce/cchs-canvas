@@ -56,8 +56,8 @@ class Assignment:
         return self.submission.get('late') and self.get_score() == 0
 
 
-class CourseStatus(NamedTuple):
-    subject: str
+class CourseScore(NamedTuple):
+    course: str
     score: int
 
 class SubmissionStatus(Enum):
@@ -86,6 +86,7 @@ class Reporter:
     def __init__(self):
         self.canvas = Canvas(API_URL, AB_API_KEY)
         self.user = self.canvas.get_user(AB_USER_ID)
+        self.courses = self.user.get_courses(enrollment_state="active", include=["total_scores"])
         self.report = None
 
     def is_valid_course(self, course):
@@ -95,8 +96,33 @@ class Reporter:
         return True
 
     def course_short_name(self, course):
-        name = course.name[9:]
+        name = course if isinstance(course, str) else course.name
+        name = name[9:]
         return name.partition(' ')[0]
+
+    def get_course_scores(self):
+        enrollments = self.user.get_enrollments()
+        scores = []        
+        course_dict = {}        
+        for c in self.courses:
+            course_dict[c.id] = c.name
+        total = 0            
+        for e in enrollments:
+            if e.grades.get('current_score'):
+                name = self.course_short_name(course_dict[e.course_id])
+                score = e.grades.get('current_score') + 0.5
+                scores.append(CourseScore(name, score))
+                total = total + score
+        scores.append(CourseScore("Average", int(total / len(scores) + 0.5)))
+        return scores
+            
+    def get_average_score(self):
+        scores = self.get_course_scores()
+        total = 0
+        for score in scores:
+            total = total + score.score
+        return int(total / len(scores) + 0.5)
+
 
     def check_daily_course_submissions(self, course, date):
         status_list = []
@@ -114,9 +140,9 @@ class Reporter:
                     state = SubmissionStatus.Submitted 
                 else:
                     state = SubmissionStatus.Not_Submitted
-                # print("%-8s: %-20.20s [%s]" % (course_name, assignment.get_name(), state))
                 status_list.append(AssignmentStatus(self.course_short_name(course), assignment.get_name(), assignment.get_due_date(), assignment.get_score(), state))
-        return status_list
+        return status_list                    
+
 
     def check_course_assigments(self, course):
         status_list = []
@@ -140,21 +166,16 @@ class Reporter:
 
     def run_daily_submission_report(self, date):
         status_list = []
-        courses = self.user.get_courses(enrollment_state="active")
-        for course in courses:
+        for course in self.courses:
             status_list.extend(self.check_daily_course_submissions(course, date))
         return status_list
-
-    def check_all_assigments(self):
-        courses = self.user.get_courses(enrollment_state="active")
-        for course in courses:
-            self.report.extend(self.check_course_assigments(course))
 
     def run_assignment_report(self, filter):
         filtered_report = []            
         if not self.report:
             self.report = []
-            self.check_all_assigments()
+            for course in self.courses:
+                self.report.extend(self.check_course_assigments(course))
         for assignment in self.report:
             if (assignment.status == filter):
                 filtered_report.append(assignment)
