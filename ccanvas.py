@@ -19,9 +19,13 @@ class Assignment:
         self.submission = assignment.submission
         self.is_valid = self.assignment.due_at and self.assignment.points_possible
         if (self.is_valid):
-            self.due_date = datetime.strptime(self.assignment.due_at, '%Y-%m-%dT%H:%M:%SZ')         
-            if self.due_date.hour < 8:
-                self.due_date = self.due_date - timedelta(hours=8)
+            self.due_date = self.convert_date(self.assignment.due_at)         
+
+    def convert_date(self, canvas_date):
+        date = datetime.strptime(canvas_date, '%Y-%m-%dT%H:%M:%SZ')         
+        if date.hour < 8:
+            date = date - timedelta(hours=8)
+        return date
 
     def get_name(self):
         return self.assignment.name
@@ -49,6 +53,12 @@ class Assignment:
     def is_submitted(self):
         return self.submission.get('submitted_at')
 
+    def get_submission_date(self):
+        if (self.is_submitted()):
+            return self.convert_date(self.submission.get('submitted_at'))
+        else:
+            return None
+
     def is_missing(self):
         return self.submission.get('missing')
 
@@ -75,6 +85,7 @@ class AssignmentStatus(NamedTuple):
     due_date: datetime
     score: int
     status: SubmissionStatus
+    submission_date: datetime = None
 
 # Examples
 # Physics submitted      https://cchs.instructure.com/courses/5347/assignments/160100/submissions/5573
@@ -110,7 +121,7 @@ class Reporter:
         for e in enrollments:
             if e.grades.get('current_score'):
                 name = self.course_short_name(course_dict[e.course_id])
-                score = e.grades.get('current_score') + 0.5
+                score = int(e.grades.get('current_score') + 0.5)
                 scores.append(CourseScore(name, score))
                 total = total + score
         scores.append(CourseScore("Average", int(total / len(scores) + 0.5)))
@@ -157,10 +168,11 @@ class Reporter:
                     status = SubmissionStatus.Missing
                 elif assignment.is_late():
                     status = SubmissionStatus.Late
+                    print("%s: %s" % (assignment.get_name(), assignment.get_submission_date()))
                 elif assignment.get_score() > 0 and assignment.get_score() <= 50:
                     status = SubmissionStatus.Low_Score
                 if (status):
-                    status_list.append(AssignmentStatus(self.course_short_name(course), assignment.get_name(), assignment.get_due_date(), assignment.get_score(), status))
+                    status_list.append(AssignmentStatus(self.course_short_name(course), assignment.get_name(), assignment.get_due_date(), assignment.get_score(), status, assignment.get_submission_date()))
                     #print("%-8s, %-30.30s, %s, %s" % (self.course_short_name(course), assignment.get_name(), assignment.get_due_date().strftime("%m/%d"), status))
         return status_list
 
