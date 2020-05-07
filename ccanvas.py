@@ -1,5 +1,6 @@
 import sys
 import datetime
+import pytz
 import json
 from enum import Enum
 from typing import NamedTuple
@@ -136,6 +137,7 @@ class Reporter:
 
 
     def check_daily_course_submissions(self, course, date):
+        date = date.astimezone(pytz.timezone('US/Pacific'))
         status_list = []
         if not self.is_valid_course(course):
             return status_list
@@ -168,7 +170,6 @@ class Reporter:
                     status = SubmissionStatus.Missing
                 elif assignment.is_late():
                     status = SubmissionStatus.Late
-                    print("%s: %s" % (assignment.get_name(), assignment.get_submission_date()))
                 elif assignment.get_score() > 0 and assignment.get_score() <= 50:
                     status = SubmissionStatus.Low_Score
                 if (status):
