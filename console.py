@@ -1,3 +1,4 @@
+import sys
 import argparse
 from datetime import datetime
 from ccanvas import Reporter
@@ -12,15 +13,22 @@ def mm_dd(date):
 parser = argparse.ArgumentParser(description='Query Canvas')
 parser.add_argument('--date', type=datetime.fromisoformat, default=datetime.today(), help='date in ISO format')
 parser.add_argument('--all', action="store_true", help='check for missing assignments')
-parser.add_argument('--md', action="store_true", help='output in Markdown')
-parser.add_argument('--csv', action="store_true", help='output in CSV')
+parser.add_argument('--announcements', action="store_true", help='list announcements')
 args = parser.parse_args()
 reporter = Reporter()
+if (args.announcements):
+    print("=== Announcements for %s ====" % (mm_dd(args.date)))
+    get_announcements = reporter.get_announcements()
+    for a in get_announcements:
+        print("%-8.8s: %s" % (a.course, a.title))    
+    print("\n")
 print("=== Assignments due on %s ====" % (mm_dd(args.date)))
 status_list = reporter.run_daily_submission_report(args.date)
 for status in status_list:
     state = status.status.name + " (%d%%)" % (status.score) if status.status == SubmissionStatus.Marked else status.status.name
     print("%-8s: %-20.20s [%s]" % (status.course, status.name, state))        
+if not args.all:
+    sys.exit()
 print("\n==== Grades ====")
 scores = reporter.get_course_scores()
 for score in scores:

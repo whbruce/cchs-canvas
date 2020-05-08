@@ -13,6 +13,13 @@ HB_API_KEY = "2817~tdljhwYEfDtAQtJhe5GDw0ACh4jrBT4Zm9MUz6LAFrYEPrebelWCZX6XwQNbZ
 AB_API_KEY = "2817~Ikko2aFRhG18kdv8dModOpP30IpW2sPLKw5sTOwwEFHD7E9Prvj5aki8c2oAXRiV"
 AB_USER_ID = 5573
    
+def convert_date(canvas_date):
+    date = datetime.strptime(canvas_date, '%Y-%m-%dT%H:%M:%SZ')         
+    if date.hour < 8:
+        date = date - timedelta(hours=8)
+    return date
+
+
 class Assignment:
     def __init__(self, assignment):
         self.assignment = assignment
@@ -20,13 +27,7 @@ class Assignment:
         self.submission = assignment.submission
         self.is_valid = self.assignment.due_at and self.assignment.points_possible
         if (self.is_valid):
-            self.due_date = self.convert_date(self.assignment.due_at)         
-
-    def convert_date(self, canvas_date):
-        date = datetime.strptime(canvas_date, '%Y-%m-%dT%H:%M:%SZ')         
-        if date.hour < 8:
-            date = date - timedelta(hours=8)
-        return date
+            self.due_date = convert_date(self.assignment.due_at)         
 
     def get_name(self):
         return self.assignment.name
@@ -56,7 +57,7 @@ class Assignment:
 
     def get_submission_date(self):
         if (self.is_submitted()):
-            return self.convert_date(self.submission.get('submitted_at'))
+            return convert_date(self.submission.get('submitted_at'))
         else:
             return None
 
@@ -66,6 +67,12 @@ class Assignment:
     def is_late(self):
         return self.submission.get('late') and self.get_score() == 0
 
+
+class Announcement(NamedTuple):
+    course: str
+    title: str
+    message: str
+    date: datetime
 
 class CourseScore(NamedTuple):
     course: str
@@ -99,6 +106,9 @@ class Reporter:
         self.canvas = Canvas(API_URL, AB_API_KEY)
         self.user = self.canvas.get_user(AB_USER_ID)
         self.courses = self.user.get_courses(enrollment_state="active", include=["total_scores"])
+        self.course_dict = {}        
+        for c in self.courses:
+            self.course_dict[c.id] = c.name
         self.report = None
 
     def is_valid_course(self, course):
@@ -116,9 +126,6 @@ class Reporter:
         enrollments = self.user.get_enrollments()
         scores = []        
         course_dict = {}        
-        for c in self.courses:
-            course_dict[c.id] = c.name
-        total = 0            
         for e in enrollments:
             if e.grades.get('current_score'):
                 name = self.course_short_name(course_dict[e.course_id])
@@ -194,4 +201,23 @@ class Reporter:
                 filtered_report.append(assignment)
         return filtered_report
 
+    def is_useful_announcement(self, title):
+        if title.startswith("****"):
+            return False
+        elif title.startswith("Attendance"):
+            return False            
+        return True
 
+    def get_announcements(self):
+        courses=[]
+        for id in self.course_dict:
+            courses.append("course_" + str(id))
+        today = datetime.today().astimezone(pytz.timezone('US/Pacific'))
+        #start_date = today - timedelta(days=1)
+        start_date = today.strftime("%Y-%m-%d")
+        announcements=[]
+        for a in self.canvas.get_announcements(context_codes=courses, start_date=start_date):
+            if self.is_useful_announcement(a.title):
+                course = self.course_short_name(self.course_dict[int(a.context_code[7:])])
+                announcements.append(Announcement(course, a.title, a.message, a.posted_at))
+        return announcements
