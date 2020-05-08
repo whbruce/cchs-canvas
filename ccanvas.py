@@ -111,6 +111,9 @@ class Reporter:
             self.course_dict[c.id] = c.name
         self.report = None
 
+    def reset(self):
+        self.report = None
+
     def is_valid_course(self, course):
         for name in ['Support', 'Service', 'Utility', 'Counseling']:
             if name in course.name:
@@ -124,11 +127,11 @@ class Reporter:
 
     def get_course_scores(self):
         enrollments = self.user.get_enrollments()
-        scores = []        
-        course_dict = {}        
+        scores = []
+        total = 0        
         for e in enrollments:
             if e.grades.get('current_score'):
-                name = self.course_short_name(course_dict[e.course_id])
+                name = self.course_short_name(self.course_dict[e.course_id])
                 score = int(e.grades.get('current_score') + 0.5)
                 scores.append(CourseScore(name, score))
                 total = total + score
@@ -213,8 +216,8 @@ class Reporter:
         for id in self.course_dict:
             courses.append("course_" + str(id))
         today = datetime.today().astimezone(pytz.timezone('US/Pacific'))
-        #start_date = today - timedelta(days=1)
-        start_date = today.strftime("%Y-%m-%d")
+        start_date = today - timedelta(hours=12)
+        start_date = start_date.strftime("%Y-%m-%d")
         announcements=[]
         for a in self.canvas.get_announcements(context_codes=courses, start_date=start_date):
             if self.is_useful_announcement(a.title):

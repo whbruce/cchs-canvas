@@ -16,6 +16,10 @@ class ScoreTable(Table):
     course = Col('Course')
     score = Col('Score')
 
+class CourseStatusString:
+    def __init__(self, c):
+        self.course = c.course
+        self.score = c.score
 
 class AssignmentStatusString:
     def __init__(self, a):
@@ -23,6 +27,7 @@ class AssignmentStatusString:
         self.name = a.name[0:25]
         self.status = a.status.name
         self.date = mm_dd(a.due_date)
+        self.score = str(int(a.score + 0.5)) + "%"
 
 class AssigmentTable(Table):
     course = Col('Course')
@@ -34,11 +39,29 @@ class AssigmentStatusTable(Table):
     name = Col('Assignment')
     status = Col('Status')
 
-def to_string_table(assignments, clazz):
+class AssigmentScoreTable(Table):
+    course = Col('Course')
+    name = Col('Assignment')
+    score = Col('Score')
+
+class CourseTable(Table):
+    course = Col('Course')
+    score = Col('Score')
+
+class AnnouncementTable(Table):
+    date = Col('Date')
+    course = Col('Course')
+
+def to_string_table(assignments, layout):
     table=[]
+    entry_type = AssignmentStatusString if layout == AssigmentStatusTable else CourseStatusString 
     for a in assignments:
-        table.append(AssignmentStatusString(a))
-    return clazz(table)
+        table.append(entry_type(a))
+    return layout(table)
+
+def run_assignment_report(query):
+    table = AssigmentScoreTable if query == SubmissionStatus.Low_Score  else AssigmentTable
+    return to_string_table(reporter.run_assignment_report(query), table)
 
 app = Flask(__name__)
 reporter = Reporter()
@@ -47,16 +70,27 @@ reporter = Reporter()
 def home():
     return render_template('index.html')
 
+@app.route("/scores")
+def scores():
+    scores = to_string_table(reporter.get_course_scores(), CourseTable)
+    return render_template('scores.html', scores=scores)
+
 @app.route("/today")
 def today():
     today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssigmentStatusTable)
     return render_template('today.html', today=today)
 
+@app.route("/announcements")
+def announcements():
+    announcements = to_string_table(reporter.get_announcements(), AssigmentStatusTable)
+    return render_template('announcements.html', announcements=announcements)
+
 @app.route("/attention")
 def attention():
-    missing = to_string_table(reporter.run_assignment_report(SubmissionStatus.Missing), AssigmentTable)
-    late = to_string_table(reporter.run_assignment_report(SubmissionStatus.Late), AssigmentTable)    
-    low_score = to_string_table(reporter.run_assignment_report(SubmissionStatus.Low_Score), AssigmentTable)        
+    reporter.reset()
+    missing = run_assignment_report(SubmissionStatus.Missing)
+    late = run_assignment_report(SubmissionStatus.Late)    
+    low_score = run_assignment_report(SubmissionStatus.Low_Score)    
     return render_template('attention.html', missing=missing, late=late, low_score=low_score)
 
 if __name__ == "__main__":
