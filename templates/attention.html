@@ -1,8 +1,11 @@
-<html>
-    <h2>Scores</h2>    
-    {{ scores }}
+{% extends 'base.html' %}
+
+{% block content %}
     <h2>Missing assignments</h2>    
     {{ missing }}
-    <h2>Late assignments waiting to be marked</h2>    
+    <h2>Late assignments</h2>    
     {{ late }}
-</html>
+    <h2>Low score</h2>    
+    {{ low_score }}
+{% endblock %}
+

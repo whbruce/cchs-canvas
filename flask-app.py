@@ -20,7 +20,7 @@ class ScoreTable(Table):
 class AssignmentStatusString:
     def __init__(self, a):
         self.course = a.course
-        self.name = a.name
+        self.name = a.name[0:25]
         self.status = a.status.name
         self.date = mm_dd(a.due_date)
 
@@ -41,25 +41,23 @@ def to_string_table(assignments, clazz):
     return clazz(table)
 
 app = Flask(__name__)
+reporter = Reporter()
 
 @app.route("/")
 def home():
-#    reporter = Reporter()
-#    scores = ScoreTable(reporter.get_course_scores())
-#    today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssigmentStatusTable)
-#    missing = to_string_table(reporter.run_assignment_report(SubmissionStatus.Missing), AssigmentTable)
-#    late = to_string_table(reporter.run_assignment_report(SubmissionStatus.Late), AssigmentTable)    
-#    return render_template('index.html', scores=scores, today=today, missing=missing, late=late)
     return render_template('index.html')
 
 @app.route("/today")
 def today():
-    reporter = Reporter()
-#    scores = ScoreTable(reporter.get_course_scores())
     today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssigmentStatusTable)
- #   missing = to_string_table(reporter.run_assignment_report(SubmissionStatus.Missing), AssigmentTable)
- #   late = to_string_table(reporter.run_assignment_report(SubmissionStatus.Late), AssigmentTable)    
     return render_template('today.html', today=today)
+
+@app.route("/attention")
+def attention():
+    missing = to_string_table(reporter.run_assignment_report(SubmissionStatus.Missing), AssigmentTable)
+    late = to_string_table(reporter.run_assignment_report(SubmissionStatus.Late), AssigmentTable)    
+    low_score = to_string_table(reporter.run_assignment_report(SubmissionStatus.Low_Score), AssigmentTable)        
+    return render_template('attention.html', missing=missing, late=late, low_score=low_score)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=True)
