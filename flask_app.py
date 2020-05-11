@@ -54,7 +54,7 @@ class AnnouncementTable(Table):
 
 def to_string_table(assignments, layout):
     table=[]
-    if (layout == AssignmentScoreTable or layout == AssignmentTable):
+    if (layout in [AssignmentScoreTable, AssignmentStatusTable, AssignmentTable]):
         entry_type = AssignmentStatusString    
     else:
         entry_type = CourseStatusString    
@@ -80,12 +80,12 @@ def scores():
 
 @app.route("/today")
 def today():
-    today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssigmentStatusTable)
+    today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssignmentStatusTable)
     return render_template('today.html', today=today)
 
 @app.route("/announcements")
 def announcements():
-    announcements = to_string_table(reporter.get_announcements(), AssigmentStatusTable)
+    announcements = to_string_table(reporter.get_announcements(), AssignmentStatusTable)
     return render_template('announcements.html', announcements=announcements)
 
 @app.route("/attention")
