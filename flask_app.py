@@ -29,17 +29,17 @@ class AssignmentStatusString:
         self.date = mm_dd(a.due_date)
         self.score = str(int(a.score + 0.5)) + "%"
 
-class AssigmentTable(Table):
+class AssignmentTable(Table):
     course = Col('Course')
     name = Col('Assignment')
     date = Col('Due Date')
 
-class AssigmentStatusTable(Table):
+class AssignmentStatusTable(Table):
     course = Col('Course')
     name = Col('Assignment')
     status = Col('Status')
 
-class AssigmentScoreTable(Table):
+class AssignmentScoreTable(Table):
     course = Col('Course')
     name = Col('Assignment')
     score = Col('Score')
@@ -54,13 +54,16 @@ class AnnouncementTable(Table):
 
 def to_string_table(assignments, layout):
     table=[]
-    entry_type = AssignmentStatusString if layout == AssigmentStatusTable else CourseStatusString 
+    if (layout == AssignmentScoreTable or layout == AssignmentTable):
+        entry_type = AssignmentStatusString    
+    else:
+        entry_type = CourseStatusString    
     for a in assignments:
         table.append(entry_type(a))
     return layout(table)
 
 def run_assignment_report(query):
-    table = AssigmentScoreTable if query == SubmissionStatus.Low_Score  else AssigmentTable
+    table = AssignmentScoreTable if query == SubmissionStatus.Low_Score  else AssignmentTable
     return to_string_table(reporter.run_assignment_report(query), table)
 
 app = Flask(__name__)
