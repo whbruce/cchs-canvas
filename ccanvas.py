@@ -12,6 +12,7 @@ API_URL = "https://cchs.instructure.com"
 HB_API_KEY = "2817~tdljhwYEfDtAQtJhe5GDw0ACh4jrBT4Zm9MUz6LAFrYEPrebelWCZX6XwQNbZWVH"
 AB_API_KEY = "2817~Ikko2aFRhG18kdv8dModOpP30IpW2sPLKw5sTOwwEFHD7E9Prvj5aki8c2oAXRiV"
 AB_USER_ID = 5573
+LOW_SCORE_THRESHOLD = 60
    
 def convert_date(canvas_date):
     date = datetime.strptime(canvas_date, '%Y-%m-%dT%H:%M:%SZ')         
@@ -180,7 +181,7 @@ class Reporter:
                     status = SubmissionStatus.Missing
                 elif assignment.is_late():
                     status = SubmissionStatus.Late
-                elif assignment.get_score() > 0 and assignment.get_score() <= 50:
+                elif assignment.get_score() > 0 and assignment.get_score() <= LOW_SCORE_THRESHOLD:
                     status = SubmissionStatus.Low_Score
                 if (status):
                     status_list.append(AssignmentStatus(self.course_short_name(course), assignment.get_name(), assignment.get_due_date(), assignment.get_score(), status, assignment.get_submission_date()))
