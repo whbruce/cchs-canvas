@@ -1,4 +1,5 @@
 import sys
+import os
 import datetime
 import pytz
 import json
@@ -14,6 +15,7 @@ AB_API_KEY = "2817~Ikko2aFRhG18kdv8dModOpP30IpW2sPLKw5sTOwwEFHD7E9Prvj5aki8c2oAX
 AB_USER_ID = 5573
 LOW_SCORE_THRESHOLD = 60
    
+
 def convert_date(canvas_date):
     date = datetime.strptime(canvas_date, '%Y-%m-%dT%H:%M:%SZ')         
     if date.hour < 8:
@@ -203,6 +205,8 @@ class Reporter:
         for assignment in self.report:
             if (assignment.status == filter):
                 filtered_report.append(assignment)
+        if (filter == SubmissionStatus.Low_Score):
+            filtered_report.sort(key=lambda a: a.score)
         return filtered_report
 
     def is_useful_announcement(self, title):

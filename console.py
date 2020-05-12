@@ -12,6 +12,7 @@ def mm_dd(date):
 
 parser = argparse.ArgumentParser(description='Query Canvas')
 parser.add_argument('--date', type=datetime.fromisoformat, default=datetime.today(), help='date in ISO format')
+parser.add_argument('--low', action="store_true", help='list assigments needing attention')
 parser.add_argument('--attention', action="store_true", help='list assigments needing attention')
 parser.add_argument('--all', action="store_true", help='check for missing assignments')
 parser.add_argument('--grades', action="store_true", help='list course scores')
@@ -29,6 +30,11 @@ elif args.grades:
     scores = reporter.get_course_scores()
     for score in scores:
         print("%-8s: %d" % (score.course, score.score))
+elif args.low:
+    print("\n==== Assignments with low score ====")
+    status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score)
+    for status in status_list:
+        print("%-8s: %-20.20s %s [%d%%]" % (status.course, status.name, mm_dd(status.due_date), status.score))
 elif args.attention:
     print("\n==== Missing assignments ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Missing)
