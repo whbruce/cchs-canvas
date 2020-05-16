@@ -2,6 +2,7 @@ from flask import Flask
 from flask import render_template
 from flask_table import Table, Col
 from datetime import datetime
+import pytz
 from typing import NamedTuple
 from ccanvas import Reporter
 from ccanvas import SubmissionStatus
@@ -80,7 +81,7 @@ def scores():
 
 @app.route("/today")
 def today():
-    time = reporter.get_check_in_time(datetime.today())
+    time = reporter.get_check_in_time(datetime.today().astimezone(pytz.timezone('US/Pacific')))
     if (time):
         check_in_time = time.strftime("%H:%M")
     else:
