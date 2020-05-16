@@ -20,7 +20,7 @@ def convert_date(canvas_date):
     date = datetime.strptime(canvas_date, '%Y-%m-%dT%H:%M:%SZ')         
     if date.hour < 8:
         date = date - timedelta(hours=8)
-    return date
+    return date.replace(tzinfo=pytz.UTC)
 
 
 class Assignment:
@@ -30,7 +30,7 @@ class Assignment:
         self.submission = assignment.submission
         self.is_valid = self.assignment.due_at and self.assignment.points_possible
         if (self.is_valid):
-            self.due_date = convert_date(self.assignment.due_at)         
+             self.due_date = convert_date(self.assignment.due_at)         
 
     def get_name(self):
         return self.assignment.name
@@ -55,6 +55,12 @@ class Assignment:
         else:
             return 0
 
+    def get_points_dropped(self):
+        if self.is_graded():
+            return self.assignment.points_possible - self.submission.get('score')
+        else:
+            return 0
+
     def is_submitted(self):
         return self.submission.get('submitted_at')
 
@@ -65,7 +71,7 @@ class Assignment:
             return None
 
     def is_missing(self):
-        return self.submission.get('missing')
+        return self.submission.get('missing') and not self.is_graded()
 
     def is_late(self):
         return self.submission.get('late') and self.get_score() == 0
@@ -90,20 +96,30 @@ class SubmissionStatus(Enum):
     Low_Score = 6
     External = 7
 
-class AssignmentStatus(NamedTuple):
-    course: str
-    name: str
-    due_date: datetime
-    score: int
-    status: SubmissionStatus
-    submission_date: datetime = None
+#class AssignmentStatus(NamedTuple):
+#    course: str
+#    name: str
+#    due_date: datetime
+#    score: int
+#    status: SubmissionStatus
+#    submission_date: datetime = None
+class AssignmentStatus():
+    def __init__(self, course_name, assignment, status):
+        self.course = course_name
+        self.name = assignment.get_name()
+        self.due_date = assignment.get_due_date()
+        self.score = assignment.get_score()
+        self.status = status
+        self.submission_date = assignment.get_submission_date()
+        self.dropped = assignment.get_points_dropped()
+        #AssignmentStatus(self.course_short_name(course), assignment.get_name(), assignment.get_due_date(), assignment.get_score(), status, assignment.get_submission_date()))
+
 
 # Examples
 # Physics submitted      https://cchs.instructure.com/courses/5347/assignments/160100/submissions/5573
 # Geometry comments      https://cchs.instructure.com/courses/5205/assignments/159434/submissions/5573
 # Geometry not submitted https://cchs.instructure.com/courses/5205/assignments/159972/submissions/5573
 # Wellness no submission https://cchs.instructure.com/courses/5237/assignments/158002/submissions/5573
-
 class Reporter:
     def __init__(self):
         self.canvas = Canvas(API_URL, AB_API_KEY)
@@ -118,8 +134,9 @@ class Reporter:
         self.report = None
 
     def is_valid_course(self, course):
-        for name in ['Support', 'Service', 'Utility', 'Counseling']:
-            if name in course.name:
+        course_name = course if isinstance(course, str) else course.name
+        for name in ['Academic', 'Service', 'Utility', 'Counseling', 'Sophomore']:
+            if name in course_name:
                 return False
         return True
 
@@ -133,8 +150,8 @@ class Reporter:
         scores = []
         total = 0        
         for e in enrollments:
-            if e.grades.get('current_score'):
-                name = self.course_short_name(self.course_dict[e.course_id])
+            name = self.course_short_name(self.course_dict[e.course_id])
+            if e.grades.get('current_score') and self.is_valid_course(name):
                 score = int(e.grades.get('current_score') + 0.5)
                 scores.append(CourseScore(name, score))
                 total = total + score
@@ -166,7 +183,8 @@ class Reporter:
                     state = SubmissionStatus.Submitted 
                 else:
                     state = SubmissionStatus.Not_Submitted
-                status_list.append(AssignmentStatus(self.course_short_name(course), assignment.get_name(), assignment.get_due_date(), assignment.get_score(), state))
+                # status_list.append(AssignmentStatus(self.course_short_name(course), assignment.get_name(), assignment.get_due_date(), assignment.get_score(), state))
+                status_list.append(AssignmentStatus(self.course_short_name(course), assignment, state))
         return status_list                    
 
 
@@ -177,7 +195,7 @@ class Reporter:
         assignments = course.get_assignments(order_by="due_at", include=["submission"])
         for a in assignments:
             assignment = Assignment(a)
-            if assignment.is_valid and assignment.get_due_date() < datetime.today():
+            if assignment.is_valid and assignment.get_due_date() < datetime.today().astimezone(pytz.timezone('US/Pacific')):
                 status = None
                 if assignment.is_missing():
                     status = SubmissionStatus.Missing
@@ -186,8 +204,7 @@ class Reporter:
                 elif assignment.get_score() > 0 and assignment.get_score() <= LOW_SCORE_THRESHOLD:
                     status = SubmissionStatus.Low_Score
                 if (status):
-                    status_list.append(AssignmentStatus(self.course_short_name(course), assignment.get_name(), assignment.get_due_date(), assignment.get_score(), status, assignment.get_submission_date()))
-                    #print("%-8s, %-30.30s, %s, %s" % (self.course_short_name(course), assignment.get_name(), assignment.get_due_date().strftime("%m/%d"), status))
+                    status_list.append(AssignmentStatus(self.course_short_name(course), assignment, status))
         return status_list
 
     def run_daily_submission_report(self, date):
@@ -206,7 +223,7 @@ class Reporter:
             if (assignment.status == filter):
                 filtered_report.append(assignment)
         if (filter == SubmissionStatus.Low_Score):
-            filtered_report.sort(key=lambda a: a.score)
+            filtered_report.sort(key=lambda a: a.dropped, reverse=True)
         return filtered_report
 
     def is_useful_announcement(self, title):
@@ -215,6 +232,12 @@ class Reporter:
         elif title.startswith("Attendance"):
             return False            
         return True
+
+    def get_assignments_weightings(self):
+        for c in self.courses:
+            groups = c.get_assignment_groups()
+            for g in groups:
+                print("%s %s %d" % (self.course_short_name(c.name), g.name, g.group_weight))
 
     def get_announcements(self):
         courses=[]
@@ -229,3 +252,21 @@ class Reporter:
                 course = self.course_short_name(self.course_dict[int(a.context_code[7:])])
                 announcements.append(Announcement(course, a.title, a.message, a.posted_at))
         return announcements
+
+    def get_check_in_time(self, date):
+        courses = [5237, 4843, 5237, 4843, 5237]
+        day = date.weekday()
+        if (day > 4):
+            return None
+        course_id = courses[day] 
+        start_date = date - timedelta(hours=12)
+        end_date = date + timedelta(hours=12)
+        context_code = "course_" + str(course_id)        
+        for a in self.canvas.get_announcements(context_codes=[context_code], start_date=start_date.strftime("%Y-%m-%d"), end_date=end_date.strftime("%Y-%m-%d")):
+            a.course_id = int(a.context_code[7:])
+            course = self.course_short_name(self.course_dict[int(a.context_code[7:])])
+            for e in a.get_topic_entries():
+                if (e.user_id == AB_USER_ID):
+                    t = convert_date(e.created_at).astimezone(pytz.timezone('US/Pacific'))
+                    return t
+        return None

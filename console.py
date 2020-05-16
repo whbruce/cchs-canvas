@@ -49,7 +49,12 @@ elif args.attention:
     for status in status_list:
         print("%-8s: %-20.20s %s %s" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date)))
 else:
-    print("=== Assignments due on %s ====" % (mm_dd(args.date)))
+    t = reporter.get_check_in_time(args.date)
+    if t:
+        print("Checked in at %s" % (t.strftime("%H:%M")))
+    else:
+         print("Did not check in")
+    print("\n=== Assignments due on %s ====" % (mm_dd(args.date)))
     status_list = reporter.run_daily_submission_report(args.date)
     for status in status_list:
         state = status.status.name + " (%d%%)" % (status.score) if status.status == SubmissionStatus.Marked else status.status.name

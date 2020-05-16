@@ -80,8 +80,13 @@ def scores():
 
 @app.route("/today")
 def today():
+    time = reporter.get_check_in_time(datetime.today())
+    if (time):
+        check_in_time = time.strftime("%H:%M")
+    else:
+        check_in_time = None
     today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssignmentStatusTable)
-    return render_template('today.html', today=today)
+    return render_template('today.html', today=today, check_in_time=check_in_time)
 
 @app.route("/announcements")
 def announcements():
