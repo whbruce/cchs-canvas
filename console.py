@@ -16,7 +16,9 @@ parser.add_argument('--low', action="store_true", help='list assigments needing 
 parser.add_argument('--attention', action="store_true", help='list assigments needing attention')
 parser.add_argument('--all', action="store_true", help='check for missing assignments')
 parser.add_argument('--grades', action="store_true", help='list course scores')
+parser.add_argument('--submissions', action="store_true", help='create submission time report')
 parser.add_argument('--announcements', action="store_true", help='list announcements')
+parser.add_argument('--w', action="store_true", help='weightings')
 args = parser.parse_args()
 reporter = Reporter()
 if (args.announcements):
@@ -34,20 +36,24 @@ elif args.low:
     print("\n==== Assignments with low score ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score)
     for status in status_list:
-        print("%-8s: %-20.20s %s [%d%%]" % (status.course, status.name, mm_dd(status.due_date), status.score))
+        print("%-8s: %-25.25s %s [%d%%]" % (status.course, status.name, mm_dd(status.due_date), status.score))
 elif args.attention:
     print("\n==== Missing assignments ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Missing)
     for status in status_list:
-        print("%-8s: %-20.20s %s" % (status.course, status.name, mm_dd(status.due_date)))
+        print("%-8s: %-25.25s %s" % (status.course, status.name, mm_dd(status.due_date)))
     print("\n==== Assignments with low score ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score)
-    for status in status_list:
-        print("%-8s: %-20.20s %s [%d%%]" % (status.course, status.name, mm_dd(status.due_date), status.score))
+    for status in status_list[0:15]:
+        print("%-8s: %-25.25s %s [%d]" % (status.course, status.name, mm_dd(status.due_date), status.dropped))
     print("\n==== Late assignments waiting to be marked ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Late)
     for status in status_list:
-        print("%-8s: %-20.20s %s %s" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date)))
+        print("%-8s: %-25.25s %s %s" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date)))
+elif args.submissions:
+    reporter.run_submission_report()
+elif args.w:
+    reporter.get_assignments_weightings()
 else:
     t = reporter.get_check_in_time(args.date)
     if t:
@@ -58,5 +64,5 @@ else:
     status_list = reporter.run_daily_submission_report(args.date)
     for status in status_list:
         state = status.status.name + " (%d%%)" % (status.score) if status.status == SubmissionStatus.Marked else status.status.name
-        print("%-8s: %-20.20s [%s]" % (status.course, status.name, state))        
+        print("%-8s: %-25.25s [%s]" % (status.course, status.name, state))        
 

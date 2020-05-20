@@ -28,7 +28,8 @@ class AssignmentStatusString:
         self.name = a.name[0:25]
         self.status = a.status.name
         self.date = mm_dd(a.due_date)
-        self.score = str(int(a.score + 0.5)) + "%"
+        self.score = int(a.dropped)
+        
 
 class AssignmentTable(Table):
     course = Col('Course')
@@ -43,7 +44,7 @@ class AssignmentStatusTable(Table):
 class AssignmentScoreTable(Table):
     course = Col('Course')
     name = Col('Assignment')
-    score = Col('Score')
+    score = Col('Points lost')
 
 class CourseTable(Table):
     course = Col('Course')
@@ -64,8 +65,12 @@ def to_string_table(assignments, layout):
     return layout(table)
 
 def run_assignment_report(query):
-    table = AssignmentScoreTable if query == SubmissionStatus.Low_Score  else AssignmentTable
-    return to_string_table(reporter.run_assignment_report(query), table)
+    table = AssignmentTable
+    report = reporter.run_assignment_report(query)
+    if query == SubmissionStatus.Low_Score:
+        table = AssignmentScoreTable
+        report = report[0:12]
+    return to_string_table(report, table)
 
 app = Flask(__name__)
 reporter = Reporter()
@@ -98,8 +103,10 @@ def announcements():
 def attention():
     reporter.reset()
     missing = run_assignment_report(SubmissionStatus.Missing)
+    missing.no_items = "No missing assignments - nice work!"
     late = run_assignment_report(SubmissionStatus.Late)    
-    low_score = run_assignment_report(SubmissionStatus.Low_Score)    
+    late.no_items = "Everything has been marked!"
+    low_score = run_assignment_report(SubmissionStatus.Low_Score)
     return render_template('attention.html', missing=missing, late=late, low_score=low_score)
 
 if __name__ == "__main__":
