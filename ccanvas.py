@@ -202,9 +202,10 @@ class Reporter:
                 status = SubmissionStatus.Missing
             elif assignment.is_late():
                 status = SubmissionStatus.Late
-            elif assignment.is_graded() and (assignment.get_points_dropped() > 5):
+            elif assignment.get_points_dropped() > 5:
                 status = SubmissionStatus.Low_Score
                 possible_gain = (self.weightings[assignment.group] * assignment.get_points_dropped()) / self.group_max[assignment.group]
+                # print("%s %s %d" % (assignment.course_name, assignment.get_name(), possible_gain))
             if (status):
                 status_list.append(AssignmentStatus(assignment, status, possible_gain))
         return status_list
