@@ -176,14 +176,10 @@ class Reporter:
         return int(total / len(scores) + 0.5)
 
 
-    def check_daily_course_submissions(self, course, date):
+    def check_daily_course_submissions(self, date):
         date = date.astimezone(pytz.timezone('US/Pacific'))
         status_list = []
-        if not self.is_valid_course(course):
-            return status_list
-        assignments = course.get_assignments(order_by="due_at", include=["submission"])
-        for a in assignments:
-            assignment = Assignment(a)
+        for assignment in self.assignments:
             if assignment.is_due(date):
                 if assignment.is_graded():
                     state  = SubmissionStatus.Marked
@@ -193,7 +189,7 @@ class Reporter:
                     state = SubmissionStatus.Submitted 
                 else:
                     state = SubmissionStatus.Not_Submitted
-                status_list.append(AssignmentStatus(self.course_short_name(course), assignment, state))
+                status_list.append(AssignmentStatus(assignment, state, 0))
         return status_list                    
 
 
@@ -214,22 +210,20 @@ class Reporter:
         return status_list
 
     def run_daily_submission_report(self, date):
-        status_list = []
-        for course in self.courses:
-            status_list.extend(self.check_daily_course_submissions(course, date))
-        return status_list
+        date = date.astimezone(pytz.timezone('US/Pacific'))
+        self.load_assignments(date)
+        return self.check_daily_course_submissions(date)
 
-    def load_assignments(self):
+    def load_assignments(self, end_date):
         for w in self.weightings:
             self.group_max[w] = 0
         self.assignments = []
-        today = datetime.today().astimezone(pytz.timezone('US/Pacific')).replace(hour=0, minute=0)
         for course in self.courses:
             if self.is_valid_course(course):
                 raw_assignments = course.get_assignments(order_by="due_at", include=["submission"])
                 for a in raw_assignments:
                     assignment = Assignment(course, a)
-                    if assignment.is_valid and assignment.get_due_date() < today:
+                    if assignment.is_valid and assignment.get_due_date() < end_date:
                         self.assignments.append(assignment)
                         group_id = a.assignment_group_id
                         self.group_max[group_id] = self.group_max[group_id] + a.points_possible
@@ -243,7 +237,8 @@ class Reporter:
     def run_assignment_report(self, filter):
         filtered_report = []            
         if not self.report:
-            self.load_assignments()
+            yesterday = datetime.today().astimezone(pytz.timezone('US/Pacific')).replace(hour=0, minute=0)
+            self.load_assignments(yesterday)
             self.report = self.check_course_assigments()
         for assignment in self.report:
             if (assignment.status == filter):
