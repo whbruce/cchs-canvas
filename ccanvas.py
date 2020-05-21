@@ -6,6 +6,7 @@ import json
 from enum import Enum
 from typing import NamedTuple
 from canvasapi import Canvas
+from canvasapi import exceptions
 from datetime import datetime
 from datetime import timedelta
 
@@ -211,9 +212,9 @@ class Reporter:
         return status_list
 
     def run_daily_submission_report(self, date):
-        date = date.astimezone(pytz.timezone('US/Pacific'))
-        self.load_assignments(date)
-        return self.check_daily_course_submissions(date)
+        end_of_today = date.astimezone(pytz.timezone('US/Pacific')).replace(hour=23, minute=59)
+        self.load_assignments(end_of_today)
+        return self.check_daily_course_submissions(end_of_today)
 
     def load_assignments(self, end_date):
         for w in self.weightings:
@@ -340,8 +341,11 @@ class Reporter:
         for a in self.canvas.get_announcements(context_codes=[context_code], start_date=start_date.strftime("%Y-%m-%d"), end_date=end_date.strftime("%Y-%m-%d")):
             a.course_id = int(a.context_code[7:])
             course = self.course_short_name(self.course_dict[int(a.context_code[7:])])
-            for e in a.get_topic_entries():
-                if (e.user_id == AB_USER_ID):
-                    t = convert_date(e.created_at).astimezone(pytz.timezone('US/Pacific'))
-                    return t
+            try:
+                for e in a.get_topic_entries():
+                    if (e.user_id == AB_USER_ID):
+                        t = convert_date(e.created_at).astimezone(pytz.timezone('US/Pacific'))
+                        return t
+            except exceptions.Forbidden:
+                pass
         return None
