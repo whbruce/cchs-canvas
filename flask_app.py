@@ -28,7 +28,7 @@ class AssignmentStatusString:
         self.name = a.name[0:25]
         self.status = a.status.name
         self.date = mm_dd(a.due_date)
-        self.score = int(a.dropped)
+        self.score = int(a.possible_gain)
         
 
 class AssignmentTable(Table):
@@ -44,7 +44,7 @@ class AssignmentStatusTable(Table):
 class AssignmentScoreTable(Table):
     course = Col('Course')
     name = Col('Assignment')
-    score = Col('Points lost')
+    score = Col('Gain')
 
 class CourseTable(Table):
     course = Col('Course')

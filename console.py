@@ -45,7 +45,7 @@ elif args.attention:
     print("\n==== Assignments with low score ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score)
     for status in status_list[0:15]:
-        print("%-8s: %-25.25s %s [%d]" % (status.course, status.name, mm_dd(status.due_date), status.dropped))
+        print("%-8s: %-25.25s %s [%d]" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
     print("\n==== Late assignments waiting to be marked ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Late)
     for status in status_list:
