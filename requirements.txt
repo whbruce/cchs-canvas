@@ -9,9 +9,15 @@ Flask-Table==0.5.0
 idna==2.9
 itsdangerous==1.1.0
 Jinja2==2.11.2
+lxml==4.5.1
+Markdown==3.2.2
 MarkupSafe==1.1.1
+Pillow==7.1.2
+python-pptx==0.6.18
 pytz==2020.1
 requests==2.23.0
 six==1.14.0
 urllib3==1.25.9
 Werkzeug==1.0.1
+wget==3.2
+XlsxWriter==1.2.8

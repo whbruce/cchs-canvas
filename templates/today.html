@@ -8,4 +8,8 @@
         <p>Checked in at {{ check_in_time }} </p>     
     {% endif %}
     {{ today }}
+    {% if english %}
+        {{ english | safe }}
+    {% endif %}
+
 {% endblock %}

@@ -3,12 +3,16 @@ import os
 import datetime
 import pytz
 import json
+import wget
+import io
 from enum import Enum
 from typing import NamedTuple
 from canvasapi import Canvas
 from canvasapi import exceptions
 from datetime import datetime
 from datetime import timedelta
+import tempfile
+import pptx
 
 API_URL = "https://cchs.instructure.com"
 HB_API_KEY = "2817~tdljhwYEfDtAQtJhe5GDw0ACh4jrBT4Zm9MUz6LAFrYEPrebelWCZX6XwQNbZWVH"
@@ -35,7 +39,7 @@ class Assignment:
         self.assignment = assignment
         # self.submission = assignment.get_submission(AB_USER_ID, include=["submission_comments"])
         self.submission = assignment.submission
-        self.is_valid = self.assignment.due_at and self.assignment.points_possible
+        self.is_valid = self.assignment.due_at and self.assignment.points_possible and not self.submission.get('excused')
         if (self.is_valid):
              self.due_date = convert_date(self.assignment.due_at)
              self.group = assignment.assignment_group_id         
@@ -349,3 +353,58 @@ class Reporter:
             except exceptions.Forbidden:
                 pass
         return None
+
+
+    def download_file(self, course, filename):
+        path = os.path.join(tempfile.gettempdir(), filename)
+        print(path)
+        if not os.path.exists(path):
+            for file in course.get_files():
+                #print("%s %d %d" % (file.filename, course.id, file.id))
+                if (file.filename == filename):
+                    print("Downloading to %s" % (path))
+                    return wget.download(file.url, out=path)
+            return None
+        else:
+            return path
+
+    def get_course(self, name):
+        for course in self.courses:
+            if name in course.name:
+                return course
+        return None
+
+    def get_english_notes(self):
+        date = datetime.today().astimezone(pytz.timezone('US/Pacific'))
+        course = self.get_course("English")
+        pptx_mime_type =  "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        files = course.get_files(content_types=pptx_mime_type, sort="created_at", order="desc")
+        date_format = "%#m.%d.pptx" if "win" in sys.platform else "%-m.%d.pptx"
+        expected_filename = date.strftime(date_format)    
+        print(expected_filename)
+        for file in files:
+                if file.filename <= expected_filename:
+                    break
+        else:
+            return None
+        filename = file.filename
+        print(filename)
+        download_path = self.download_file(course, filename)
+        print(download_path)
+        buffer = io.StringIO()
+        print("### English Notes (%s)" % (filename), file=buffer)
+        presentation = pptx.Presentation(download_path)
+        slides = presentation.slides
+        for slide in slides:
+            header = True
+            for shape in slide.shapes:
+                # print(" - %s %s" % (shape, shape.has_text_frame))
+                if shape.has_text_frame:
+                    for paragraph in shape.text_frame.paragraphs:
+                            if (paragraph.text):
+                                marker = "####" if header else "*"
+                                print("%s %s" % (marker, paragraph.text), file=buffer)
+                                header = False
+        markdown_text = buffer.getvalue()
+        buffer.close()
+        return markdown_text

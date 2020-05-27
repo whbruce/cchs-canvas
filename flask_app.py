@@ -6,6 +6,7 @@ import pytz
 from typing import NamedTuple
 from ccanvas import Reporter
 from ccanvas import SubmissionStatus
+import markdown
 
 def mm_dd(date):
     if (date):
@@ -92,7 +93,8 @@ def today():
     else:
         check_in_time = None
     today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssignmentStatusTable)
-    return render_template('today.html', today=today, check_in_time=check_in_time)
+    notes = reporter.get_english_notes()
+    return render_template('today.html', today=today, check_in_time=check_in_time, english=markdown.markdown(notes))
 
 @app.route("/announcements")
 def announcements():
