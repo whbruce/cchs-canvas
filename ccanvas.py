@@ -5,6 +5,7 @@ import pytz
 import json
 import wget
 import io
+import urllib
 from enum import Enum
 from typing import NamedTuple
 from canvasapi import Canvas
@@ -355,18 +356,29 @@ class Reporter:
         return None
 
 
-    def download_file(self, course, filename):
-        path = os.path.join(tempfile.gettempdir(), filename)
+    def download_file(self, file):
+        path = os.path.join(tempfile.gettempdir(), file.filename)
         print(path)
         if not os.path.exists(path):
-            for file in course.get_files():
-                #print("%s %d %d" % (file.filename, course.id, file.id))
-                if (file.filename == filename):
-                    print("Downloading to %s" % (path))
-                    return wget.download(file.url, out=path)
-            return None
-        else:
-            return path
+#            http_proxy = os.getenv('http_proxy')
+#            https_proxy = os.getenv('https_proxy')
+#            if http_proxy and https_proxy:
+#                proxies = {
+#                    'http' : http_proxy,
+#                    'https' : https_proxy
+#                }
+#            else:
+#                proxies = None
+            try:
+                # return wget.download(file.url, out=path)
+                res = urllib.request.urlopen(file.url)
+                con=res.read()
+                outf=open(path,'wb')
+                outf.write(con)
+                outf.close()
+            except:
+                return None
+        return path
 
     def get_course(self, name):
         for course in self.courses:
@@ -389,7 +401,10 @@ class Reporter:
             return None
         filename = file.filename
         print(filename)
-        download_path = self.download_file(course, filename)
+        download_path = filename
+        download_path = self.download_file(file)
+        if not download_path:
+            return None
         print(download_path)
         buffer = io.StringIO()
         print("### English Notes (%s)" % (filename), file=buffer)
