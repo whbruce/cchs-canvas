@@ -24,6 +24,8 @@ LOW_SCORE_THRESHOLD = 60
 
 def course_short_name(course):
     name = course if isinstance(course, str) else course.name
+    if name.startswith("PE"):
+        return name
     name = name[9:]
     return name.partition(' ')[0]
 
@@ -151,10 +153,11 @@ class Reporter:
 
     def is_valid_course(self, course):
         course_name = course if isinstance(course, str) else course.name
-        for name in ['Academic', 'Service', 'Utility', 'Counseling', 'Sophomore']:
-            if name in course_name:
-                return False
-        return True
+        #for name in ['Academic', 'Service', 'Utility', 'Counseling', 'Sophomore']:
+        #    if name in course_name:
+        #        return False
+        #return True
+        return "PE" in course_name
 
     def course_short_name(self, course):
         name = course if isinstance(course, str) else course.name
@@ -359,23 +362,10 @@ class Reporter:
     def download_file(self, file):
         path = os.path.join(tempfile.gettempdir(), file.filename)
         print(path)
+        print(file.url)
         if not os.path.exists(path):
-#            http_proxy = os.getenv('http_proxy')
-#            https_proxy = os.getenv('https_proxy')
-#            if http_proxy and https_proxy:
-#                proxies = {
-#                    'http' : http_proxy,
-#                    'https' : https_proxy
-#                }
-#            else:
-#                proxies = None
             try:
-                # return wget.download(file.url, out=path)
-                res = urllib.request.urlopen(file.url)
-                con=res.read()
-                outf=open(path,'wb')
-                outf.write(con)
-                outf.close()
+                wget.download(file.url, out=path)
             except:
                 return None
         return path
