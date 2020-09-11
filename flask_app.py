@@ -1,4 +1,5 @@
-from flask import Flask
+import json
+from flask import Flask, request
 from flask import render_template
 from flask_table import Table, Col
 from datetime import datetime
@@ -74,27 +75,29 @@ def run_assignment_report(query):
     return to_string_table(report, table)
 
 app = Flask(__name__)
-reporter = Reporter()
+with open('config.json') as json_file:
+    config = json.load(json_file)
+student = "alex"
+api_key = config[student]['key']
+user_id = config[student]['id']
+reporter = Reporter(api_key, user_id)
 
-@app.route("/")
+@app.route("/", methods=['GET', 'POST'])
 def home():
-    return render_template('index.html')
+    colours = ['Red', 'Blue', 'Black', 'Orange']    
+    print(request)
+    return render_template('index.html', colours=colours)
 
 @app.route("/scores")
 def scores():
+    print(request.form)
     scores = to_string_table(reporter.get_course_scores(), CourseTable)
     return render_template('scores.html', scores=scores)
 
 @app.route("/today")
 def today():
-    time = reporter.get_check_in_time(datetime.today().astimezone(pytz.timezone('US/Pacific')))
-    if (time):
-        check_in_time = time.strftime("%H:%M")
-    else:
-        check_in_time = None
     today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssignmentStatusTable)
-    notes = reporter.get_english_notes()
-    return render_template('today.html', today=today, check_in_time=check_in_time, english=markdown.markdown(notes))
+    return render_template('today.html', today=today)
 
 @app.route("/announcements")
 def announcements():

@@ -1,8 +1,10 @@
 import sys
 import argparse
+import json
 from datetime import datetime
 from ccanvas import Reporter
 from ccanvas import SubmissionStatus
+
 
 def mm_dd(date):
     if (date):
@@ -11,6 +13,7 @@ def mm_dd(date):
         return "??/??"
 
 parser = argparse.ArgumentParser(description='Query Canvas')
+parser.add_argument('--student', type=str.lower, required=True, choices={"alex", "nina"}, help='student first name')
 parser.add_argument('--date', type=datetime.fromisoformat, default=datetime.today(), help='date in ISO format')
 parser.add_argument('--low', action="store_true", help='list assigments needing attention')
 parser.add_argument('--attention', action="store_true", help='list assigments needing attention')
@@ -20,7 +23,13 @@ parser.add_argument('--submissions', action="store_true", help='create submissio
 parser.add_argument('--announcements', action="store_true", help='list announcements')
 parser.add_argument('--english', action="store_true", help='print English slide')
 args = parser.parse_args()
-reporter = Reporter()
+
+with open('config.json') as json_file:
+    config = json.load(json_file)
+api_key = config[args.student]['key']
+user_id = config[args.student]['id']
+
+reporter = Reporter(api_key, user_id)
 if (args.announcements):
     print("=== Announcements for %s ====" % (mm_dd(args.date)))
     get_announcements = reporter.get_announcements()
@@ -55,11 +64,6 @@ elif args.submissions:
 elif args.english:
     print(reporter.get_english_notes())
 else:
-    t = reporter.get_check_in_time(args.date)
-    if t:
-        print("Checked in at %s" % (t.strftime("%H:%M")))
-    else:
-         print("Did not check in")
     print("\n=== Assignments due on %s ====" % (mm_dd(args.date)))
     status_list = reporter.run_daily_submission_report(args.date)
     for status in status_list:

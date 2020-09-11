@@ -2,14 +2,5 @@
 
 {% block content %}
     <h2>Today's assignments</h2>
-    {% if check_in_time is none %}
-        <p>Did not check in</p>
-    {% else %}
-        <p>Checked in at {{ check_in_time }} </p>     
-    {% endif %}
     {{ today }}
-    {% if english %}
-        {{ english | safe }}
-    {% endif %}
-
 {% endblock %}
