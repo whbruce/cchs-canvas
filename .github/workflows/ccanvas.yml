@@ -29,7 +29,7 @@ jobs:
         python console.py --student alex > alex.txt
         python console.py --student nina > nina.txt        
     - name: Upload daily report
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
           name: report
           path: |
