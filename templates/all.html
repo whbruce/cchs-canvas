@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>Course scores</h2>    
+    {{ scores }}
+    <h2>Today's assignments</h2>
+    {{ today }}
+    <h2>Missing assignments</h2>    
+    {{ missing }}   
+    <h2>Late work yet to be marked</h2>    
+    {{ late }}
+    <h2>Assignments with low score</h2>
+    <p>'Gain' column shows the max extra points from corrections</p>
+    {{ low_score }}
+{% endblock %}
+

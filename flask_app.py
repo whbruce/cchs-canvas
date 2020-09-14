@@ -82,11 +82,20 @@ api_key = config[student]['key']
 user_id = config[student]['id']
 reporter = Reporter(api_key, user_id)
 
-@app.route("/", methods=['GET', 'POST'])
+@app.route("/")
 def home():
-    colours = ['Red', 'Blue', 'Black', 'Orange']    
-    print(request)
-    return render_template('index.html', colours=colours)
+    return render_template('index.html')
+
+@app.route("/all")
+def all():
+    scores = to_string_table(reporter.get_course_scores(), CourseTable)
+    today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssignmentStatusTable)    
+    missing = run_assignment_report(SubmissionStatus.Missing)
+    missing.no_items = "No missing assignments - nice work!"
+    late = run_assignment_report(SubmissionStatus.Late)    
+    late.no_items = "Everything has been marked!"
+    low_score = run_assignment_report(SubmissionStatus.Low_Score)
+    return render_template('all.html', scores=scores, today=today, missing=missing, late=late, low_score=low_score)
 
 @app.route("/scores")
 def scores():

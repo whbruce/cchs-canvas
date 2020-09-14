@@ -41,11 +41,13 @@ class Assignment:
         self.assignment = assignment
         # self.submission = assignment.get_submission(AB_USER_ID, include=["submission_comments"])
         self.submission = assignment.submission
-        self.is_valid = self.assignment.due_at and self.assignment.points_possible and not self.submission.get('excused')
+        self.is_valid = self.assignment.points_possible and self.assignment.due_at and not self.submission.get('excused')
         # self.assignment.submission_type and 
         if (self.is_valid):
-             self.due_date = convert_date(self.assignment.due_at)
-             self.group = assignment.assignment_group_id         
+            self.due_date = convert_date(self.assignment.due_at)
+            self.group = assignment.assignment_group_id
+        else:
+            self.due_date = None
 
     def get_name(self):
         return self.assignment.name
@@ -221,6 +223,7 @@ class Reporter:
 
     def run_daily_submission_report(self, date):
         end_of_today = date.astimezone(pytz.timezone('US/Pacific')).replace(hour=23, minute=59)
+        # print(end_of_today)
         self.load_assignments(end_of_today)
         return self.check_daily_course_submissions(end_of_today)
 
@@ -233,9 +236,9 @@ class Reporter:
             if course_name:
                 raw_assignments = course.get_assignments(order_by="due_at", include=["submission"])
                 for a in raw_assignments:
-                    print("%s %s" % (course, a))
                     assignment = Assignment(course_name, a)
-                    if assignment.is_valid and assignment.get_due_date() < end_date:
+                    # print("%s %s %s" % (assignment.get_due_date(), course, a))
+                    if assignment.is_valid and assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date:
                         self.assignments.append(assignment)
                         group_id = a.assignment_group_id
                         self.group_max[group_id] = self.group_max[group_id] + a.points_possible
