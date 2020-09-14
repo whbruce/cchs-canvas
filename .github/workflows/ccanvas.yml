@@ -32,4 +32,6 @@ jobs:
       uses: actions/upload-artifact@v1
       with:
           name: report
-          path: alex.txt nina.txt
+          path: |
+            alex.txt 
+            nina.txt
