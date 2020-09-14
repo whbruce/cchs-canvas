@@ -23,12 +23,13 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install canvasapi
+        pip install -r requirements.txt
     - name: Run
       run: |
-        python console.py --all > report.txt
+        python console.py --student alex > alex.txt
+        python console.py --student nina > nina.txt        
     - name: Upload daily report
       uses: actions/upload-artifact@v1
       with:
           name: report
-          path: report.txt
+          path: alex.txt nina.txt
