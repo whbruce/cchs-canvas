@@ -18,7 +18,7 @@ import pptx
 API_URL = "https://cchs.instructure.com"
 LOW_SCORE_THRESHOLD = 60
 
-graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "English", "Theology", "Biology", "Wellness"]
+graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "English", "Theology", "Biology", "Wellness", "Support"]
 
 def course_short_name(course):
     name = course if isinstance(course, str) else course.name

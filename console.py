@@ -40,7 +40,7 @@ elif args.grades:
     print("\n==== Grades ====")
     scores = reporter.get_course_scores()
     for score in scores:
-        print("%-8s: %d" % (score.course, score.score))
+        print("%-10s: %3d" % (score.course, score.score))
 elif args.low:
     print("\n==== Assignments with low score ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score)
