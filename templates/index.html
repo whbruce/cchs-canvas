@@ -1,9 +1,16 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h2>Select Canvas report</h2>    
-    <a href="all">All Reports</a>
-    <br><a href="today">Today's assignments</a>
-    <br><a href="scores">Course scores</a>    
-    <br><a href="attention">Assignments needing attention</a>    
+<h1>Welcome to Canvas Reporter</h1>
+<h2>Select student</h2>
+<form method="GET" action="reports">
+    <label for="student">Student:</label>
+    <select name="student" id="student">
+    {% for name in students %}
+        <option value="{{name}}">{{name}}</option>
+    {% endfor %}
+    </select>
+    <button type="submit">Get Reports</button>
+</form>    
+
 {% endblock %}

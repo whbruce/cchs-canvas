@@ -237,7 +237,7 @@ class Reporter:
                 raw_assignments = course.get_assignments(order_by="due_at", include=["submission"])
                 for a in raw_assignments:
                     assignment = Assignment(course_name, a)
-                    print("%s %s %s" % (assignment.get_due_date(), course, a))
+                    # print("%s %s %s" % (assignment.get_due_date(), course, a))
                     if assignment.is_valid and assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date:
                         self.assignments.append(assignment)
                         group_id = a.assignment_group_id

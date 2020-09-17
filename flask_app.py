@@ -77,25 +77,33 @@ def run_assignment_report(query):
 app = Flask(__name__)
 with open('config.json') as json_file:
     config = json.load(json_file)
-student = "alex"
-api_key = config[student]['key']
-user_id = config[student]['id']
-reporter = Reporter(api_key, user_id)
+reporter = None
+student = None
 
 @app.route("/")
 def home():
-    return render_template('index.html')
+    return render_template('index.html', students = config.keys())
+
+@app.route("/reports", methods=['GET', 'POST'])
+def select_report():
+    global reporter, student
+    student = request.args.get('student').lower()
+    api_key = config[student]['key']
+    user_id = config[student]['id']
+    reporter = Reporter(api_key, user_id)
+    return render_template('reports.html')
 
 @app.route("/all")
 def all():
     scores = to_string_table(reporter.get_course_scores(), CourseTable)
+    date = datetime.today().strftime("%m/%d/%y %I:%M %p")
     today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssignmentStatusTable)    
     missing = run_assignment_report(SubmissionStatus.Missing)
     missing.no_items = "No missing assignments - nice work!"
     late = run_assignment_report(SubmissionStatus.Late)    
     late.no_items = "Everything has been marked!"
     low_score = run_assignment_report(SubmissionStatus.Low_Score)
-    return render_template('all.html', scores=scores, today=today, missing=missing, late=late, low_score=low_score)
+    return render_template('all.html', student=student.capitalize(), date=date, scores=scores, today=today, missing=missing, late=late, low_score=low_score)
 
 @app.route("/scores")
 def scores():
