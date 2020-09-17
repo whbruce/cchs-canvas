@@ -41,7 +41,7 @@ class Assignment:
         self.assignment = assignment
         # self.submission = assignment.get_submission(AB_USER_ID, include=["submission_comments"])
         self.submission = assignment.submission
-        self.is_valid = self.assignment.points_possible and self.assignment.due_at and not self.submission.get('excused')
+        self.is_valid = (self.assignment.points_possible != None and self.assignment.due_at and not self.submission.get('excused'))
         # self.assignment.submission_type and 
         if (self.is_valid):
             self.due_date = convert_date(self.assignment.due_at)
@@ -95,7 +95,7 @@ class Assignment:
             return None
 
     def is_missing(self):
-        return self.submission.get('missing') and not self.is_graded()
+        return self.submission.get('missing') and self.get_score() == 0
 
     def is_late(self):
         return self.submission.get('late') and self.get_score() == 0
@@ -237,7 +237,7 @@ class Reporter:
                 raw_assignments = course.get_assignments(order_by="due_at", include=["submission"])
                 for a in raw_assignments:
                     assignment = Assignment(course_name, a)
-                    # print("%s %s %s" % (assignment.get_due_date(), course, a))
+                    print("%s %s %s" % (assignment.get_due_date(), course, a))
                     if assignment.is_valid and assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date:
                         self.assignments.append(assignment)
                         group_id = a.assignment_group_id

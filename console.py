@@ -21,7 +21,6 @@ parser.add_argument('--all', action="store_true", help='check for missing assign
 parser.add_argument('--grades', action="store_true", help='list course scores')
 parser.add_argument('--submissions', action="store_true", help='create submission time report')
 parser.add_argument('--announcements', action="store_true", help='list announcements')
-parser.add_argument('--english', action="store_true", help='print English slide')
 args = parser.parse_args()
 
 with open('config.json') as json_file:
@@ -61,8 +60,6 @@ elif args.attention:
         print("%-8s: %-25.25s %s %s" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date)))
 elif args.submissions:
     reporter.run_submission_report()
-elif args.english:
-    print(reporter.get_english_notes())
 else:
     print("\n=== Assignments due on %s ====" % (mm_dd(args.date)))
     status_list = reporter.run_daily_submission_report(args.date)
