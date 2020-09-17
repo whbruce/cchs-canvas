@@ -96,7 +96,7 @@ def select_report():
 @app.route("/all")
 def all():
     scores = to_string_table(reporter.get_course_scores(), CourseTable)
-    date = datetime.today().strftime("%m/%d/%y %I:%M %p")
+    date = datetime.today().astimezone(pytz.timezone('US/Pacific')).strftime("%m/%d/%y %I:%M %p")
     today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssignmentStatusTable)    
     missing = run_assignment_report(SubmissionStatus.Missing)
     missing.no_items = "No missing assignments - nice work!"
