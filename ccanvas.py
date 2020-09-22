@@ -61,7 +61,7 @@ class Assignment:
         return self.due_date.date() == date.date()
 
     def can_submit(self):
-        return 'none' not in self.assignment.submission_types
+        return 'none' not in self.assignment.submission_types and 'external_tool' not in self.assignment.submission_types
 
     def is_graded(self):
         return self.submission.get('entered_score')
