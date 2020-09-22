@@ -1,16 +1,15 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h1>Welcome to Canvas Reporter</h1>
-<h2>Select student</h2>
-<form method="GET" action="reports">
+<h1>Canvas Reporter</h1>
+<form method="GET" action="/all">
     <label for="student">Student:</label>
     <select name="student" id="student">
     {% for name in students %}
         <option value="{{name}}">{{name}}</option>
     {% endfor %}
     </select>
-    <button type="submit">Get Reports</button>
+    <button type="submit">Run Report</button>
 </form>    
 
 {% endblock %}

@@ -2,16 +2,11 @@
 
 {% block content %}
     <h1>{{ student }} {{ date }}</h1>
-    <h2>Course scores</h2>    
-    {{ scores }}
-    <h2>Today's assignments</h2>
+    <h2>Today</h2>
     {{ today }}
-    <h2>Missing assignments</h2>    
+    <h2>Missing</h2>    
     {{ missing }}   
-    <h2>Late work yet to be marked</h2>    
-    {{ late }}
-    <h2>Assignments with low score</h2>
-    <p>'Gain' column shows the max extra points from corrections</p>
-    {{ low_score }}
+    <h2>Grades</h2>    
+    {{ scores }}
 {% endblock %}
 

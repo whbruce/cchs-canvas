@@ -66,7 +66,7 @@ def to_string_table(assignments, layout):
         table.append(entry_type(a))
     return layout(table)
 
-def run_assignment_report(query):
+def run_assignment_report(reporter, query):
     table = AssignmentTable
     report = reporter.run_assignment_report(query)
     if query == SubmissionStatus.Low_Score:
@@ -77,8 +77,12 @@ def run_assignment_report(query):
 app = Flask(__name__)
 with open('config.json') as json_file:
     config = json.load(json_file)
-reporter = None
-student = None
+
+def get_reporter(student):
+    student = student.lower()
+    api_key = config[student]['key']
+    user_id = config[student]['id']
+    return Reporter(api_key, user_id)
 
 @app.route("/")
 def home():
@@ -95,15 +99,17 @@ def select_report():
 
 @app.route("/all")
 def all():
+    student = request.args.get('student')
+    reporter = get_reporter(student)
     scores = to_string_table(reporter.get_course_scores(), CourseTable)
     date = datetime.today().astimezone(pytz.timezone('US/Pacific')).strftime("%m/%d/%y %I:%M %p")
     today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssignmentStatusTable)    
-    missing = run_assignment_report(SubmissionStatus.Missing)
+    missing = run_assignment_report(reporter, SubmissionStatus.Missing)
     missing.no_items = "No missing assignments - nice work!"
-    late = run_assignment_report(SubmissionStatus.Late)    
-    late.no_items = "Everything has been marked!"
-    low_score = run_assignment_report(SubmissionStatus.Low_Score)
-    return render_template('all.html', student=student.capitalize(), date=date, scores=scores, today=today, missing=missing, late=late, low_score=low_score)
+    #late = run_assignment_report(reporter, SubmissionStatus.Late)
+    #late.no_items = "Everything has been marked!"
+    # low_score = run_assignment_report(reporter, SubmissionStatus.Low_Score)
+    return render_template('all.html', student=student.capitalize(), date=date, scores=scores, today=today, missing=missing)
 
 @app.route("/scores")
 def scores():
