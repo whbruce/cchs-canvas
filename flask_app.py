@@ -11,7 +11,7 @@ import markdown
 
 def mm_dd(date):
     if (date):
-        return date.strftime("%m/%d")    
+        return date.strftime("%m/%d")
     else:
         return "??/??"
 
@@ -31,7 +31,7 @@ class AssignmentStatusString:
         self.status = a.status.name
         self.date = mm_dd(a.due_date)
         self.score = int(a.possible_gain)
-        
+
 
 class AssignmentTable(Table):
     course = Col('Course')
@@ -59,9 +59,9 @@ class AnnouncementTable(Table):
 def to_string_table(assignments, layout):
     table=[]
     if (layout in [AssignmentScoreTable, AssignmentStatusTable, AssignmentTable]):
-        entry_type = AssignmentStatusString    
+        entry_type = AssignmentStatusString
     else:
-        entry_type = CourseStatusString    
+        entry_type = CourseStatusString
     for a in assignments:
         table.append(entry_type(a))
     return layout(table)
@@ -69,9 +69,10 @@ def to_string_table(assignments, layout):
 def run_assignment_report(reporter, query):
     table = AssignmentTable
     report = reporter.run_assignment_report(query)
+    print(len(report))
     if query == SubmissionStatus.Low_Score:
         table = AssignmentScoreTable
-        report = report[0:12]
+        #report = report[0:12]
     return to_string_table(report, table)
 
 app = Flask(__name__)
@@ -103,13 +104,13 @@ def all():
     reporter = get_reporter(student)
     scores = to_string_table(reporter.get_course_scores(), CourseTable)
     date = datetime.today().astimezone(pytz.timezone('US/Pacific')).strftime("%m/%d/%y %I:%M %p")
-    today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssignmentStatusTable)    
+    today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssignmentStatusTable)
     missing = run_assignment_report(reporter, SubmissionStatus.Missing)
     missing.no_items = "No missing assignments - nice work!"
     #late = run_assignment_report(reporter, SubmissionStatus.Late)
     #late.no_items = "Everything has been marked!"
-    # low_score = run_assignment_report(reporter, SubmissionStatus.Low_Score)
-    return render_template('all.html', student=student.capitalize(), date=date, scores=scores, today=today, missing=missing)
+    low_score = run_assignment_report(reporter, SubmissionStatus.Low_Score)
+    return render_template('all.html', student=student.capitalize(), date=date, scores=scores, today=today, missing=missing, low_score=low_score)
 
 @app.route("/scores")
 def scores():
@@ -132,7 +133,7 @@ def attention():
     reporter.reset()
     missing = run_assignment_report(SubmissionStatus.Missing)
     missing.no_items = "No missing assignments - nice work!"
-    late = run_assignment_report(SubmissionStatus.Late)    
+    late = run_assignment_report(SubmissionStatus.Late)
     late.no_items = "Everything has been marked!"
     low_score = run_assignment_report(SubmissionStatus.Low_Score)
     return render_template('attention.html', missing=missing, late=late, low_score=low_score)

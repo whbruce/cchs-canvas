@@ -20,6 +20,7 @@ LOW_SCORE_THRESHOLD = 60
 
 graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "English", "Theology", "Biology", "Wellness", "Support"]
 
+
 def course_short_name(course):
     name = course if isinstance(course, str) else course.name
     return name
@@ -29,7 +30,7 @@ def course_short_name(course):
     return name.partition(' ')[0]
 
 def convert_date(canvas_date):
-    date = datetime.strptime(canvas_date, '%Y-%m-%dT%H:%M:%SZ')         
+    date = datetime.strptime(canvas_date, '%Y-%m-%dT%H:%M:%SZ')
     if date.hour < 8:
         date = date - timedelta(hours=8)
     return date.replace(tzinfo=pytz.UTC)
@@ -41,8 +42,11 @@ class Assignment:
         self.assignment = assignment
         # self.submission = assignment.get_submission(AB_USER_ID, include=["submission_comments"])
         self.submission = assignment.submission
-        self.is_valid = (self.assignment.points_possible != None and self.assignment.due_at and not self.submission.get('excused'))
-        # self.assignment.submission_type and 
+        self.is_valid = self.assignment.points_possible != None \
+                        and self.assignment.due_at \
+                        and not "Attendance" in self.assignment.name \
+                        and not self.submission.get('excused')
+        # self.assignment.submission_type and
         if (self.is_valid):
             self.due_date = convert_date(self.assignment.due_at)
             self.group = assignment.assignment_group_id
@@ -143,7 +147,7 @@ class Reporter:
         self.user = self.canvas.get_user(user_id)
         self.courses = self.user.get_courses(enrollment_state="active", include=["total_scores"])
         self.course_dict = {}
-        self.group_max = {}        
+        self.group_max = {}
         for c in self.courses:
             self.course_dict[c.id] = c.name
         self.weightings = self.get_assignments_weightings()
@@ -168,7 +172,7 @@ class Reporter:
     def get_course_scores(self):
         enrollments = self.user.get_enrollments()
         scores = []
-        total = 0        
+        total = 0
         for e in enrollments:
             name = self.course_short_name(self.course_dict[e.course_id])
             if name and e.grades.get('current_score'):
@@ -178,7 +182,7 @@ class Reporter:
         if scores:
             scores.append(CourseScore("Average", int(total / len(scores) + 0.5)))
         return scores
-            
+
     def get_average_score(self):
         scores = self.get_course_scores()
         total = 0
@@ -197,11 +201,11 @@ class Reporter:
                 elif not assignment.can_submit():
                     state = SubmissionStatus.External
                 elif assignment.is_submitted():
-                    state = SubmissionStatus.Submitted 
+                    state = SubmissionStatus.Submitted
                 else:
                     state = SubmissionStatus.Not_Submitted
                 status_list.append(AssignmentStatus(assignment, state, 0))
-        return status_list                    
+        return status_list
 
 
     def check_course_assigments(self):
@@ -213,10 +217,11 @@ class Reporter:
                 status = SubmissionStatus.Missing
             elif assignment.is_late():
                 status = SubmissionStatus.Late
-            elif assignment.is_graded() and (assignment.get_points_dropped() > 5 or assignment.get_score() < 70):
-                status = SubmissionStatus.Low_Score
-                possible_gain = (self.weightings[assignment.group] * assignment.get_points_dropped()) / self.group_max[assignment.group]
-                # print("%s %s %d" % (assignment.course_name, assignment.get_name(), possible_gain))
+            elif assignment.is_graded():
+                possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / self.group_max[assignment.group] + 0.5)
+                # print("%s %s %d %d %d" % (assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], possible_gain))
+                if possible_gain > 1:
+                    status = SubmissionStatus.Low_Score
             if (status):
                 status_list.append(AssignmentStatus(assignment, status, possible_gain))
         return status_list
@@ -233,15 +238,24 @@ class Reporter:
         self.assignments = []
         for course in self.courses:
             course_name = self.course_short_name(course)
+            course_groups = []
             if course_name:
                 raw_assignments = course.get_assignments(order_by="due_at", include=["submission"])
                 for a in raw_assignments:
                     assignment = Assignment(course_name, a)
                     # print("%s %s %s" % (assignment.get_due_date(), course, a))
-                    if assignment.is_valid and assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date:
+                    group_id = a.assignment_group_id
+                    if assignment.is_valid and assignment.is_graded() and (group_id in self.group_max) and (assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date):
+                        if group_id not in course_groups:
+                            course_groups.append(group_id)
                         self.assignments.append(assignment)
-                        group_id = a.assignment_group_id
+                        # print("{} {} {}".format(course_name, group_id, assignment.get_name()))
                         self.group_max[group_id] = self.group_max[group_id] + a.points_possible
+                if len(course_groups) == 1:
+                    for w in self.assignment_groups.get(course.id):
+                        self.weightings[w] = 100
+                    if course.id not in self.equal_weighted_courses:
+                        self.equal_weighted_courses.append(course.id)
                 if course.id in self.equal_weighted_courses:
                     points = 0
                     for i in self.assignment_groups.get(course.id):
@@ -250,7 +264,7 @@ class Reporter:
                         self.group_max[i] = points
 
     def run_assignment_report(self, filter):
-        filtered_report = []            
+        filtered_report = []
         if not self.report:
             yesterday = datetime.today().astimezone(pytz.timezone('US/Pacific')).replace(hour=0, minute=0)
             self.load_assignments(yesterday)
@@ -284,7 +298,7 @@ class Reporter:
                                 submissions[hour] = submissions[hour] + 1
                             else:
                                 submissions[hour] = 1
-                            num_submissions = num_submissions + 1    
+                            num_submissions = num_submissions + 1
                             print("%s %s is early" % (course, assignment.get_name()))
                             print("%s %s" % (due_date.strftime("%m/%d"), assignment.get_submission_date().astimezone(pytz.timezone('US/Pacific'))))
         print(len(submissions))
@@ -300,11 +314,11 @@ class Reporter:
         if title.startswith("****"):
             return False
         elif title.startswith("Attendance"):
-            return False            
+            return False
         return True
 
     def is_valid_assignment_group(self, group_name):
-        for name in ["ATTENDANCE", "Imported", "Extra", "Final"]:
+        for name in ["Attendance", "Imported Assignments", "Extra", "Final"]:
             if name in group_name:
                 return False
         return True
@@ -318,6 +332,7 @@ class Reporter:
                 assignment_group = []
                 groups = c.get_assignment_groups()
                 for g in groups:
+                    # print("{}: {} ({})".format(c.name, g.name, g.id))
                     if self.is_valid_assignment_group(g.name):
                         w = g.group_weight
                         if w == 0:
@@ -348,10 +363,10 @@ class Reporter:
         day = date.weekday()
         if (day > 4):
             return None
-        course_id = courses[day] 
+        course_id = courses[day]
         start_date = date - timedelta(hours=12)
         end_date = date + timedelta(hours=12)
-        context_code = "course_" + str(course_id)        
+        context_code = "course_" + str(course_id)
         for a in self.canvas.get_announcements(context_codes=[context_code], start_date=start_date.strftime("%Y-%m-%d"), end_date=end_date.strftime("%Y-%m-%d")):
             a.course_id = int(a.context_code[7:])
             course = self.course_short_name(self.course_dict[int(a.context_code[7:])])
@@ -389,7 +404,7 @@ class Reporter:
         pptx_mime_type =  "application/vnd.openxmlformats-officedocument.presentationml.presentation"
         files = course.get_files(content_types=pptx_mime_type, sort="created_at", order="desc")
         date_format = "%#m.%d.pptx" if "win" in sys.platform else "%-m.%d.pptx"
-        expected_filename = date.strftime(date_format)    
+        expected_filename = date.strftime(date_format)
         print(expected_filename)
         for file in files:
                 if file.filename <= expected_filename:
