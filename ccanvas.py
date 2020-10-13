@@ -23,11 +23,10 @@ graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "English", "Theo
 
 def course_short_name(course):
     name = course if isinstance(course, str) else course.name
-    return name
-    if name.startswith("PE"):
-        return name
-    name = name[9:]
-    return name.partition(' ')[0]
+    for short_name in graded_courses:
+        if short_name in name:
+            return short_name
+    return None
 
 def convert_date(canvas_date):
     date = datetime.strptime(canvas_date, '%Y-%m-%dT%H:%M:%SZ')
@@ -37,8 +36,9 @@ def convert_date(canvas_date):
 
 
 class Assignment:
-    def __init__(self, course_name, assignment):
-        self.course_name = course_name
+    def __init__(self, course, assignment):
+        self.course_name = course_short_name(course.name)
+        self.course_id = course.id
         self.assignment = assignment
         # self.submission = assignment.get_submission(AB_USER_ID, include=["submission_comments"])
         self.submission = assignment.submission
@@ -76,6 +76,9 @@ class Assignment:
         else:
             return 0
 
+    def get_points_possible(self):
+        return self.assignment.points_possible
+
     def get_points_dropped(self):
         if self.is_graded():
             return self.assignment.points_possible - self.submission.get('score')
@@ -103,6 +106,9 @@ class Assignment:
 
     def is_late(self):
         return self.submission.get('late') and self.get_score() == 0
+
+    def get_group(self):
+        return self.group
 
 
 class Announcement(NamedTuple):
@@ -144,7 +150,7 @@ class Reporter:
     def __init__(self, api_key, user_id):
         self.user_id = user_id
         self.canvas = Canvas(API_URL, api_key)
-        self.user = self.canvas.get_user(user_id)
+        self.user = self.canvas.get_user('self')
         self.courses = self.user.get_courses(enrollment_state="active", include=["total_scores"])
         self.course_dict = {}
         self.group_max = {}
@@ -155,6 +161,19 @@ class Reporter:
             self.group_max[w] = 0
         self.assignments = None
         self.report = None
+
+    def load_assignments(self):
+        self.assignments = []
+        for course in self.courses:
+            course_name = self.course_short_name(course)
+            if course_name:
+                print(course_name)
+                raw_assignments = course.get_assignments(order_by="due_at", include=["submission"])
+                for a in raw_assignments:
+                    assignment = Assignment(course, a)
+                    # print("%s %s %s" % (assignment.get_due_date(), course, a))
+                    if assignment.is_valid:
+                        self.assignments.append(assignment)
 
     def reset(self):
         self.report = None
@@ -191,6 +210,15 @@ class Reporter:
         return int(total / len(scores) + 0.5)
 
 
+    def check_calendar(self, start, end):
+        status_list = []
+        #self.update_weightings(end)
+        for assignment in self.assignments:
+            due_date = assignment.get_due_date()
+            if (due_date > start) and (due_date < end) and assignment.get_points_possible() > 0:
+                status_list.append(AssignmentStatus(assignment, SubmissionStatus.Not_Submitted, assignment.get_points_possible()))
+        return status_list
+
     def check_daily_course_submissions(self, date):
         date = date.astimezone(pytz.timezone('US/Pacific'))
         status_list = []
@@ -207,74 +235,85 @@ class Reporter:
                 status_list.append(AssignmentStatus(assignment, state, 0))
         return status_list
 
+    # Re-calculate weightings in case some some weights are not yet in use
+    def update_weightings(self, end_date):
+        for w in self.weightings:
+            self.group_max[w] = 0
+        course_groups = {}
+        for assignment in self.assignments:
+            if assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date:
+                group_id = assignment.get_group()
+                if assignment.is_valid and assignment.is_graded() and (group_id in self.group_max) and (assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date):
+                    course_id = assignment.course_id
+                    if not course_id in course_groups:
+                        course_groups[course_id] = []
+                    course_group = course_groups[course_id]
+                    if group_id not in course_group:
+                        course_group.append(group_id)
+                    # print("{} {} {}".format(course_name, group_id, assignment.get_name()))
+                    self.group_max[group_id] = self.group_max[group_id] + assignment.get_points_possible()
 
-    def check_course_assigments(self):
+        for course_id in course_groups:
+            group = course_groups[course_id]
+            if len(group) == 1:
+                for w in self.assignment_groups.get(course_id):
+                    self.weightings[w] = 100
+                if course_id not in self.equal_weighted_courses:
+                    self.equal_weighted_courses.append(course_id)
+            if course_id in self.equal_weighted_courses:
+                points = 0
+                for i in self.assignment_groups.get(course_id):
+                    points = points + self.group_max[i]
+                for i in self.assignment_groups.get(course_id):
+                    self.group_max[i] = points
+
+
+    def check_course_assigments(self, end_date):
+        self.update_weightings(end_date)
         status_list = []
         for assignment in self.assignments:
-            status = None
-            possible_gain = 0
-            if assignment.is_missing():
-                status = SubmissionStatus.Missing
-            elif assignment.is_late():
-                status = SubmissionStatus.Late
-            elif assignment.is_graded():
-                possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / self.group_max[assignment.group] + 0.5)
-                # print("%s %s %d %d %d" % (assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], possible_gain))
-                if possible_gain > 1:
-                    status = SubmissionStatus.Low_Score
-            if (status):
-                status_list.append(AssignmentStatus(assignment, status, possible_gain))
+            group_id = assignment.get_group()
+            if assignment.is_valid and assignment.is_graded() and (group_id in self.group_max) and (assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date):
+                status = None
+                possible_gain = 0
+                if assignment.is_missing():
+                    status = SubmissionStatus.Missing
+                elif assignment.is_late():
+                    status = SubmissionStatus.Late
+                elif assignment.is_graded():
+                    possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / self.group_max[assignment.group])
+                    # print("%s %s %d %d %d" % (assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], possible_gain))
+                    if possible_gain > 1:
+                        status = SubmissionStatus.Low_Score
+                if (status):
+                    status_list.append(AssignmentStatus(assignment, status, possible_gain))
+
         return status_list
+
 
     def run_daily_submission_report(self, date):
         end_of_today = date.astimezone(pytz.timezone('US/Pacific')).replace(hour=23, minute=59)
         # print(end_of_today)
-        self.load_assignments(end_of_today)
         return self.check_daily_course_submissions(end_of_today)
 
-    def load_assignments(self, end_date):
-        for w in self.weightings:
-            self.group_max[w] = 0
-        self.assignments = []
-        for course in self.courses:
-            course_name = self.course_short_name(course)
-            course_groups = []
-            if course_name:
-                raw_assignments = course.get_assignments(order_by="due_at", include=["submission"])
-                for a in raw_assignments:
-                    assignment = Assignment(course_name, a)
-                    # print("%s %s %s" % (assignment.get_due_date(), course, a))
-                    group_id = a.assignment_group_id
-                    if assignment.is_valid and assignment.is_graded() and (group_id in self.group_max) and (assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date):
-                        if group_id not in course_groups:
-                            course_groups.append(group_id)
-                        self.assignments.append(assignment)
-                        # print("{} {} {}".format(course_name, group_id, assignment.get_name()))
-                        self.group_max[group_id] = self.group_max[group_id] + a.points_possible
-                if len(course_groups) == 1:
-                    for w in self.assignment_groups.get(course.id):
-                        self.weightings[w] = 100
-                    if course.id not in self.equal_weighted_courses:
-                        self.equal_weighted_courses.append(course.id)
-                if course.id in self.equal_weighted_courses:
-                    points = 0
-                    for i in self.assignment_groups.get(course.id):
-                        points = points + self.group_max[i]
-                    for i in self.assignment_groups.get(course.id):
-                        self.group_max[i] = points
+
+    def run_calendar_report(self, date):
+        start = date.astimezone(pytz.timezone('US/Pacific')).replace(hour=23, minute=59)
+        end = start + timedelta(days=7)
+        # print(end_of_today)
+        return self.check_calendar(start, end)
 
     def run_assignment_report(self, filter):
         filtered_report = []
-        if not self.report:
-            yesterday = datetime.today().astimezone(pytz.timezone('US/Pacific')).replace(hour=0, minute=0)
-            self.load_assignments(yesterday)
-            self.report = self.check_course_assigments()
-        for assignment in self.report:
+        yesterday = datetime.today().astimezone(pytz.timezone('US/Pacific')).replace(hour=0, minute=0)
+        report = self.check_course_assigments(yesterday)
+        for assignment in report:
             if (assignment.status == filter):
                 filtered_report.append(assignment)
         if (filter == SubmissionStatus.Low_Score):
             filtered_report.sort(key=lambda a: a.possible_gain, reverse=True)
         return filtered_report
+
 
     def run_submission_report(self):
         submissions = {}

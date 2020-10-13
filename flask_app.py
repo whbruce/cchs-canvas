@@ -37,6 +37,7 @@ class AssignmentTable(Table):
     course = Col('Course')
     name = Col('Assignment')
     date = Col('Due Date')
+    score = Col('Gain')
 
 class AssignmentStatusTable(Table):
     course = Col('Course')
@@ -102,15 +103,17 @@ def select_report():
 def all():
     student = request.args.get('student')
     reporter = get_reporter(student)
+    reporter.load_assignments()
     scores = to_string_table(reporter.get_course_scores(), CourseTable)
     date = datetime.today().astimezone(pytz.timezone('US/Pacific')).strftime("%m/%d/%y %I:%M %p")
     today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssignmentStatusTable)
+    week = to_string_table(reporter.run_calendar_report(datetime.today()), AssignmentTable)
     missing = run_assignment_report(reporter, SubmissionStatus.Missing)
     missing.no_items = "No missing assignments - nice work!"
     #late = run_assignment_report(reporter, SubmissionStatus.Late)
     #late.no_items = "Everything has been marked!"
     low_score = run_assignment_report(reporter, SubmissionStatus.Low_Score)
-    return render_template('all.html', student=student.capitalize(), date=date, scores=scores, today=today, missing=missing, low_score=low_score)
+    return render_template('all.html', student=student.capitalize(), date=date, scores=scores, today=today, week=week, missing=missing, low_score=low_score)
 
 @app.route("/scores")
 def scores():
