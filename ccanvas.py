@@ -300,8 +300,8 @@ class Reporter:
     def run_calendar_report(self, date):
         start = date.astimezone(pytz.timezone('US/Pacific')).replace(hour=23, minute=59)
         end = start + timedelta(days=7)
-        # print(end_of_today)
-        return self.check_calendar(start, end)
+        calendar =  self.check_calendar(start, end)
+        return(sorted(calendar, key=lambda a: a.due_date))
 
     def run_assignment_report(self, filter):
         filtered_report = []
