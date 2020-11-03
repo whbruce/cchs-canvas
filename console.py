@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from ccanvas import Reporter
 from ccanvas import SubmissionStatus
-
+import logging
 
 def mm_dd(date):
     if (date):
@@ -15,7 +15,8 @@ def mm_dd(date):
 parser = argparse.ArgumentParser(description='Query Canvas')
 parser.add_argument('--student', type=str.lower, required=True, choices={"alex", "nina"}, help='student first name')
 parser.add_argument('--date', type=datetime.fromisoformat, default=datetime.today(), help='date in ISO format')
-parser.add_argument('--low', action="store_true", help='list all status')
+parser.add_argument('--low', action="store_true", help='list assigmnents with low scores')
+parser.add_argument('--missing', action="store_true", help='list missing assigmnents')
 parser.add_argument('--attention', action="store_true", help='list assigments needing attention')
 parser.add_argument('--calendar', action="store_true", help='list forthcoming assignments')
 parser.add_argument('--all', action="store_true", help='check for missing assignments')
@@ -29,6 +30,9 @@ with open('config.json') as json_file:
 api_key = config[args.student]['key']
 user_id = config[args.student]['id']
 
+#logger = logging.getLogger('myLogger')
+#level = logging.getLevelName('DEBUG')
+#logging.setLevel(level)
 reporter = Reporter(api_key, user_id)
 reporter.load_assignments()
 if (args.announcements):
@@ -47,6 +51,11 @@ elif args.low:
     status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score)
     for status in status_list:
         print("%-8s: %-25.25s %s [%d%%]" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
+elif args.missing:
+    print("\n==== Missing assignments ====")
+    status_list = reporter.run_assignment_report(SubmissionStatus.Missing)
+    for status in status_list:
+        print("%-8s: %-25.25s %s" % (status.course, status.name, mm_dd(status.due_date)))
 elif args.attention:
     print("\n==== Missing assignments ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Missing)

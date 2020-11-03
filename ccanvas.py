@@ -6,6 +6,7 @@ import json
 import wget
 import io
 import urllib
+import logging
 from enum import Enum
 from typing import NamedTuple
 from canvasapi import Canvas
@@ -68,7 +69,7 @@ class Assignment:
         return 'none' not in self.assignment.submission_types and 'external_tool' not in self.assignment.submission_types
 
     def is_graded(self):
-        return self.submission.get('entered_score')
+        return self.submission.get('entered_score') is not None
 
     def get_score(self):
         if self.is_graded():
@@ -102,7 +103,7 @@ class Assignment:
             return None
 
     def is_missing(self):
-        return self.submission.get('missing') and self.get_score() == 0
+        return self.submission.get('missing') and not self.is_graded()
 
     def is_late(self):
         return self.submission.get('late') and self.get_score() == 0
@@ -161,17 +162,19 @@ class Reporter:
             self.group_max[w] = 0
         self.assignments = None
         self.report = None
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
 
     def load_assignments(self):
         self.assignments = []
         for course in self.courses:
             course_name = self.course_short_name(course)
             if course_name:
-                print(course_name)
+                self.logger.info("Loading {} assignments".format(course_name))
                 raw_assignments = course.get_assignments(order_by="due_at", include=["submission"])
                 for a in raw_assignments:
                     assignment = Assignment(course, a)
-                    # print("%s %s %s" % (assignment.get_due_date(), course, a))
+                    # print("%s %s %s %s" % (assignment.get_due_date(), course_name, a, assignment.is_valid))
                     if assignment.is_valid:
                         self.assignments.append(assignment)
 
@@ -273,13 +276,13 @@ class Reporter:
         status_list = []
         for assignment in self.assignments:
             group_id = assignment.get_group()
-            if assignment.is_valid and assignment.is_graded() and (group_id in self.group_max) and (assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date):
+            if assignment.is_valid and (group_id in self.group_max) and (assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date):
                 status = None
                 possible_gain = 0
                 if assignment.is_missing():
                     status = SubmissionStatus.Missing
-                elif assignment.is_late():
-                    status = SubmissionStatus.Late
+                #elif assignment.is_late():
+                #    status = SubmissionStatus.Late
                 elif assignment.is_graded():
                     possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / self.group_max[assignment.group])
                     # print("%s %s %d %d %d" % (assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], possible_gain))
