@@ -148,7 +148,7 @@ class AssignmentStatus():
 # Geometry not submitted https://cchs.instructure.com/courses/5205/assignments/159972/submissions/5573
 # Wellness no submission https://cchs.instructure.com/courses/5237/assignments/158002/submissions/5573
 class Reporter:
-    def __init__(self, api_key, user_id):
+    def __init__(self, api_key, user_id, log_level):
         self.user_id = user_id
         self.canvas = Canvas(API_URL, api_key)
         self.user = self.canvas.get_user('self')
@@ -162,7 +162,7 @@ class Reporter:
             self.group_max[w] = 0
         self.assignments = None
         self.report = None
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(level=log_level)
         self.logger = logging.getLogger(__name__)
 
     def load_assignments(self):

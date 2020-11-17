@@ -23,6 +23,7 @@ parser.add_argument('--all', action="store_true", help='check for missing assign
 parser.add_argument('--grades', action="store_true", help='list course scores')
 parser.add_argument('--submissions', action="store_true", help='create submission time report')
 parser.add_argument('--announcements', action="store_true", help='list announcements')
+parser.add_argument('--loglevel', choices={'debug', 'info', 'warning', 'error', 'critical'}, default='error', help="Set the logging level")
 args = parser.parse_args()
 
 with open('config.json') as json_file:
@@ -33,7 +34,8 @@ user_id = config[args.student]['id']
 #logger = logging.getLogger('myLogger')
 #level = logging.getLevelName('DEBUG')
 #logging.setLevel(level)
-reporter = Reporter(api_key, user_id)
+log_level=logging.getLevelName(args.loglevel.upper())
+reporter = Reporter(api_key, user_id, log_level)
 reporter.load_assignments()
 if (args.announcements):
     print("=== Announcements for %s ====" % (mm_dd(args.date)))
