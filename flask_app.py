@@ -32,6 +32,7 @@ class AssignmentStatusString:
         self.status = a.status.name
         self.due = mm_dd(a.due_date)
         self.submitted = mm_dd(a.submission_date)
+        self.graded = mm_dd(a.graded_date)
         self.score = int(a.possible_gain)
         self.attempts = a.attempts
 
@@ -50,8 +51,9 @@ class AssignmentStatusTable(Table):
 class AssignmentScoreTable(Table):
     course = Col('Course')
     name = Col('Assignment')
-    due = Col('Due')
-    submitted = Col('Done')
+    due = Col(' Due ')
+    submitted = Col(' Done ')
+    graded = Col('Graded')
     attempts = Col('Try')
     score = Col('Gain')
 

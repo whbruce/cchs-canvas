@@ -103,6 +103,13 @@ class Assignment:
         else:
             return None
 
+    def get_graded_date(self):
+        if (self.is_graded()):
+            return convert_date(self.submission.get('graded_at'))
+        else:
+            return None
+
+
     def is_missing(self):
         return self.submission.get('missing') and not self.is_graded()
 
@@ -140,8 +147,9 @@ class AssignmentStatus():
         self.name = assignment.get_name()
         self.due_date = assignment.get_due_date()
         self.score = assignment.get_score()
-        self.status = status
         self.submission_date = assignment.get_submission_date()
+        self.graded_date = assignment.get_graded_date()
+        self.status = status
         self.dropped = assignment.get_points_dropped()
         self.possible_gain = possible_gain
         self.attempts = assignment.get_attempts()
