@@ -51,6 +51,7 @@ class Assignment:
         if (self.is_valid):
             self.due_date = convert_date(self.assignment.due_at)
             self.group = assignment.assignment_group_id
+            self.attempts = self.submission.get('attempt')
         else:
             self.due_date = None
 
@@ -111,6 +112,8 @@ class Assignment:
     def get_group(self):
         return self.group
 
+    def get_attempts(self):
+        return self.attempts if self.attempts is not None else 0
 
 class Announcement(NamedTuple):
     course: str
@@ -141,6 +144,7 @@ class AssignmentStatus():
         self.submission_date = assignment.get_submission_date()
         self.dropped = assignment.get_points_dropped()
         self.possible_gain = possible_gain
+        self.attempts = assignment.get_attempts()
 
 # Examples
 # Physics submitted      https://cchs.instructure.com/courses/5347/assignments/160100/submissions/5573

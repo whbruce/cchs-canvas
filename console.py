@@ -52,7 +52,7 @@ elif args.low:
     print("\n==== Assignments with low score ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score)
     for status in status_list:
-        print("%-8s: %-25.25s %s [%d%%]" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
+        print("%-10s: %-25.25s %s %s %d [%d%%]" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date), status.attempts, status.possible_gain))
 elif args.missing:
     print("\n==== Missing assignments ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Missing)

@@ -8,6 +8,7 @@ from typing import NamedTuple
 from ccanvas import Reporter
 from ccanvas import SubmissionStatus
 import markdown
+import logging
 
 def mm_dd(date):
     if (date):
@@ -29,14 +30,16 @@ class AssignmentStatusString:
         self.course = a.course
         self.name = a.name[0:25]
         self.status = a.status.name
-        self.date = mm_dd(a.due_date)
+        self.due = mm_dd(a.due_date)
+        self.submitted = mm_dd(a.submission_date)
         self.score = int(a.possible_gain)
+        self.attempts = a.attempts
 
 
 class AssignmentTable(Table):
     course = Col('Course')
     name = Col('Assignment')
-    date = Col('Due Date')
+    due = Col('Due')
     score = Col('Gain')
 
 class AssignmentStatusTable(Table):
@@ -47,6 +50,9 @@ class AssignmentStatusTable(Table):
 class AssignmentScoreTable(Table):
     course = Col('Course')
     name = Col('Assignment')
+    due = Col('Due')
+    submitted = Col('Done')
+    attempts = Col('Try')
     score = Col('Gain')
 
 class CourseTable(Table):
@@ -54,7 +60,7 @@ class CourseTable(Table):
     score = Col('Score')
 
 class AnnouncementTable(Table):
-    date = Col('Date')
+    due = Col('Date')
     course = Col('Course')
 
 def to_string_table(assignments, layout):
@@ -84,7 +90,8 @@ def get_reporter(student):
     student = student.lower()
     api_key = config[student]['key']
     user_id = config[student]['id']
-    return Reporter(api_key, user_id)
+    log_level=logging.getLevelName('ERROR')
+    return Reporter(api_key, user_id, log_level)
 
 @app.route("/")
 def home():
