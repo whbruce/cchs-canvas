@@ -15,7 +15,8 @@ def mm_dd(date):
 parser = argparse.ArgumentParser(description='Query Canvas')
 parser.add_argument('--student', type=str.lower, required=True, choices={"alex", "nina"}, help='student first name')
 parser.add_argument('--date', type=datetime.fromisoformat, default=datetime.today(), help='date in ISO format')
-parser.add_argument('--low', action="store_true", help='list assigmnents with low scores')
+parser.add_argument('--low', action="store_true", default=4, help='list assigmnents with low scores')
+parser.add_argument('--min', type=int, default=4, help='minimum make up in low score report')
 parser.add_argument('--missing', action="store_true", help='list missing assigmnents')
 parser.add_argument('--attention', action="store_true", help='list assigments needing attention')
 parser.add_argument('--calendar', action="store_true", help='list forthcoming assignments')
@@ -50,9 +51,9 @@ elif args.grades:
         print("%-10s: %3d" % (score.course, score.score))
 elif args.low:
     print("\n==== Assignments with low score ====")
-    status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score)
+    status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score, args.min)
     for status in status_list:
-        print("%-10s: %-25.25s %s %s %s %d [%d%%]" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date), mm_dd(status.graded_date), status.attempts, status.possible_gain))
+        print("%-10s: %-25.25s %s %s %s %d [%d%%] %s" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date), mm_dd(status.graded_date), status.attempts, status.possible_gain, status.submission_comment))
 elif args.missing:
     print("\n==== Missing assignments ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Missing)

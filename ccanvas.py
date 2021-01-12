@@ -19,7 +19,7 @@ import pptx
 API_URL = "https://cchs.instructure.com"
 LOW_SCORE_THRESHOLD = 60
 
-graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "English", "Theology", "Biology", "Wellness", "Support"]
+graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "English", "Theology", "Biology", "Wellness"]
 
 
 def course_short_name(course):
@@ -41,8 +41,8 @@ class Assignment:
         self.course_name = course_short_name(course.name)
         self.course_id = course.id
         self.assignment = assignment
-        # self.submission = assignment.get_submission(AB_USER_ID, include=["submission_comments"])
         self.submission = assignment.submission
+        self.submission_comments = "No comments"
         self.is_valid = self.assignment.points_possible != None \
                         and self.assignment.due_at \
                         and not "Attendance" in self.assignment.name \
@@ -109,7 +109,6 @@ class Assignment:
         else:
             return None
 
-
     def is_missing(self):
         return self.submission.get('missing') and not self.is_graded()
 
@@ -121,6 +120,7 @@ class Assignment:
 
     def get_attempts(self):
         return self.attempts if self.attempts is not None else 0
+
 
 class Announcement(NamedTuple):
     course: str
@@ -142,7 +142,7 @@ class SubmissionStatus(Enum):
     External = 7
 
 class AssignmentStatus():
-    def __init__(self, assignment, status, possible_gain = None):
+    def __init__(self, assignment, status, possible_gain = None, submission_comment = None):
         self.course = assignment.course_name
         self.name = assignment.get_name()
         self.due_date = assignment.get_due_date()
@@ -153,6 +153,7 @@ class AssignmentStatus():
         self.dropped = assignment.get_points_dropped()
         self.possible_gain = possible_gain
         self.attempts = assignment.get_attempts()
+        self.submission_comment = submission_comment
 
 # Examples
 # Physics submitted      https://cchs.instructure.com/courses/5347/assignments/160100/submissions/5573
@@ -283,7 +284,7 @@ class Reporter:
                     self.group_max[i] = points
 
 
-    def check_course_assigments(self, end_date):
+    def check_course_assigments(self, end_date, min_gain):
         self.update_weightings(end_date)
         status_list = []
         for assignment in self.assignments:
@@ -291,17 +292,23 @@ class Reporter:
             if assignment.is_valid and (group_id in self.group_max) and (assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date):
                 status = None
                 possible_gain = 0
+                submission_comment =  "No comment"
                 if assignment.is_missing():
                     status = SubmissionStatus.Missing
                 #elif assignment.is_late():
                 #    status = SubmissionStatus.Late
-                elif assignment.is_graded():
+                elif assignment.is_submitted() and assignment.is_graded():
                     possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / self.group_max[assignment.group])
                     # print("%s %s %d %d %d" % (assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], possible_gain))
-                    if possible_gain > 1:
+                    if possible_gain >= min_gain:
                         status = SubmissionStatus.Low_Score
+                        # Getting submission comment is an expensive web service call so only do it for low scores
+                        submission = assignment.assignment.get_submission(self.user, include=["submission_comments"])
+                        comments = submission.submission_comments
+                        if comments:
+                            submission_comment = comments[0].get('comment')
                 if (status):
-                    status_list.append(AssignmentStatus(assignment, status, possible_gain))
+                    status_list.append(AssignmentStatus(assignment, status, possible_gain, submission_comment))
 
         return status_list
 
@@ -318,10 +325,11 @@ class Reporter:
         calendar =  self.check_calendar(start, end)
         return(sorted(calendar, key=lambda a: a.due_date))
 
-    def run_assignment_report(self, filter):
+    def run_assignment_report(self, filter, min_gain=4):
         filtered_report = []
+        print(min_gain)
         yesterday = datetime.today().astimezone(pytz.timezone('US/Pacific')).replace(hour=0, minute=0)
-        report = self.check_course_assigments(yesterday)
+        report = self.check_course_assigments(yesterday, min_gain)
         for assignment in report:
             if (assignment.status == filter):
                 filtered_report.append(assignment)
