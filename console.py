@@ -15,9 +15,9 @@ def mm_dd(date):
 parser = argparse.ArgumentParser(description='Query Canvas')
 parser.add_argument('--student', type=str.lower, required=True, choices={"alex", "nina"}, help='student first name')
 parser.add_argument('--date', type=datetime.fromisoformat, default=datetime.today(), help='date in ISO format')
-parser.add_argument('--low', action="store_true", default=4, help='list assigmnents with low scores')
+parser.add_argument('--low', action="store_true", help='list assigmnents with low scores')
 parser.add_argument('--min', type=int, default=4, help='minimum make up in low score report')
-parser.add_argument('--missing', action="store_true", help='list missing assigmnents')
+parser.add_argument('--missing', action="store_true", help='list missing assignments')
 parser.add_argument('--attention', action="store_true", help='list assigments needing attention')
 parser.add_argument('--calendar', action="store_true", help='list forthcoming assignments')
 parser.add_argument('--all', action="store_true", help='check for missing assignments')
@@ -32,9 +32,7 @@ with open('config.json') as json_file:
 api_key = config[args.student]['key']
 user_id = config[args.student]['id']
 
-#logger = logging.getLogger('myLogger')
-#level = logging.getLevelName('DEBUG')
-#logging.setLevel(level)
+# print(args)
 log_level=logging.getLevelName(args.loglevel.upper())
 reporter = Reporter(api_key, user_id, log_level)
 reporter.load_assignments()
@@ -58,7 +56,7 @@ elif args.missing:
     print("\n==== Missing assignments ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Missing)
     for status in status_list:
-        print("%-8s: %-25.25s %s" % (status.course, status.name, mm_dd(status.due_date)))
+        print("%-8s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
 elif args.attention:
     print("\n==== Missing assignments ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Missing)
@@ -91,7 +89,7 @@ elif args.all:
     print("\n==== Missing assignments ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Missing)
     for status in status_list:
-        print("%-8s: %-25.25s %s" % (status.course, status.name, mm_dd(status.due_date)))
+        print("%-8s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
     print("\n==== Assignments with low score ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score)
     for status in status_list[0:15]:

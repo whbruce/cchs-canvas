@@ -84,8 +84,9 @@ class Assignment:
     def get_points_dropped(self):
         if self.is_graded():
             return self.assignment.points_possible - self.submission.get('score')
+        elif self.is_missing():
+            return self.assignment.points_possible
         else:
-            # return self.assignment.points_possible
             return 0
 
     def get_raw_score(self):
@@ -209,11 +210,12 @@ class Reporter:
         scores = []
         total = 0
         for e in enrollments:
-            name = self.course_short_name(self.course_dict[e.course_id])
-            if name and e.grades.get('current_score'):
-                score = int(e.grades.get('current_score') + 0.5)
-                scores.append(CourseScore(name, score))
-                total = total + score
+            if e.course_id in self.course_dict:
+                name = self.course_short_name(self.course_dict[e.course_id])
+                if name and e.grades.get('current_score'):
+                    score = int(e.grades.get('current_score') + 0.5)
+                    scores.append(CourseScore(name, score))
+                    total = total + score
         if scores:
             scores.append(CourseScore("Average", int(total / len(scores) + 0.5)))
         return scores
@@ -295,6 +297,8 @@ class Reporter:
                 submission_comment =  "No comment"
                 if assignment.is_missing():
                     status = SubmissionStatus.Missing
+                    print(self.group_max[assignment.group])
+                    possible_gain = -1 * int((self.weightings[assignment.group] * assignment.get_points_dropped()) / (self.group_max[assignment.group] + assignment.get_points_possible()))
                 #elif assignment.is_late():
                 #    status = SubmissionStatus.Late
                 elif assignment.is_submitted() and assignment.is_graded():
@@ -325,9 +329,8 @@ class Reporter:
         calendar =  self.check_calendar(start, end)
         return(sorted(calendar, key=lambda a: a.due_date))
 
-    def run_assignment_report(self, filter, min_gain=4):
+    def run_assignment_report(self, filter, min_gain=3):
         filtered_report = []
-        print(min_gain)
         yesterday = datetime.today().astimezone(pytz.timezone('US/Pacific')).replace(hour=0, minute=0)
         report = self.check_course_assigments(yesterday, min_gain)
         for assignment in report:
