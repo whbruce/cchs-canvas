@@ -19,7 +19,7 @@ import pptx
 API_URL = "https://cchs.instructure.com"
 LOW_SCORE_THRESHOLD = 60
 
-graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "English", "Theology", "Biology", "Wellness"]
+graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "English", "Theology", "Biology", "Physics", "Computer", "Wellness", "PE", "Support" ]
 
 
 def course_short_name(course):
@@ -132,6 +132,7 @@ class Announcement(NamedTuple):
 class CourseScore(NamedTuple):
     course: str
     score: int
+    points: float
 
 class SubmissionStatus(Enum):
     Submitted = 1
@@ -162,11 +163,22 @@ class AssignmentStatus():
 # Geometry not submitted https://cchs.instructure.com/courses/5205/assignments/159972/submissions/5573
 # Wellness no submission https://cchs.instructure.com/courses/5237/assignments/158002/submissions/5573
 class Reporter:
-    def __init__(self, api_key, user_id, log_level):
+    def __init__(self, api_key, user_id, term, log_level):
+        logging.basicConfig(level=log_level)
+        self.logger = logging.getLogger(__name__)
         self.user_id = user_id
         self.canvas = Canvas(API_URL, api_key)
         self.user = self.canvas.get_user('self')
-        self.courses = self.user.get_courses(enrollment_state="active", include=["total_scores"])
+        self.term = term
+        if self.term is None:
+            self.courses = self.user.get_courses(enrollment_state="active", include=["total_scores", "term"])
+        else:
+            self.term = self.term.replace('_', ' ')
+            all_courses = self.user.get_courses(include=["total_scores", "term"])
+            self.courses = []
+            for c in all_courses:
+                if c.term.get('name') == self.term:
+                    self.courses.append(c)
         self.course_dict = {}
         self.group_max = {}
         for c in self.courses:
@@ -176,8 +188,6 @@ class Reporter:
             self.group_max[w] = 0
         self.assignments = None
         self.report = None
-        logging.basicConfig(level=log_level)
-        self.logger = logging.getLogger(__name__)
 
     def load_assignments(self):
         self.assignments = []
@@ -205,19 +215,58 @@ class Reporter:
     def is_valid_course(self, course):
         return self.course_short_name(course)
 
+    def is_honors_course(self, course):
+        return "Honors" in course
+
+    def get_points(self, score, is_honors):
+        table  = [
+            (97, 4.30),
+            (93, 4.00),
+            (90, 3.70),
+            (87, 3.30),
+            (83, 3.00),
+            (80, 2.70),
+            (77, 2.30),
+            (73, 2.00),
+            (70, 1.70),
+            (67, 1.30),
+            (63, 1.00),
+            (60, 0.70),
+            (0, 0.0)
+        ]
+        for entry in table:
+            if score >= entry[0]:
+                return entry[1] + (0.5 * is_honors)
+
     def get_course_scores(self):
-        enrollments = self.user.get_enrollments()
+        enrollments = self.user.get_enrollments(state=["current_and_concluded"])
         scores = []
-        total = 0
+        total_score = 0
+        total_points = 0.0
         for e in enrollments:
             if e.course_id in self.course_dict:
-                name = self.course_short_name(self.course_dict[e.course_id])
+                full_name = self.course_dict[e.course_id]
+                name = self.course_short_name(full_name)
                 if name and e.grades.get('current_score'):
                     score = int(e.grades.get('current_score') + 0.5)
-                    scores.append(CourseScore(name, score))
-                    total = total + score
+                    is_honors = self.is_honors_course(full_name)
+                    points = self.get_points(score, is_honors)
+                    scores.append(CourseScore(name, score, points))
+                    total_score = total_score + score
+                    total_points = total_points + points
+
+        # Fixing for missing score due to Canvas error
+        if self.user_id == 5573 and self.term == "Fall 2020":
+            score = 90
+            points = self.get_points(score, False)
+            scores.append(CourseScore("Algebra", score, points))
+            total_score = total_score + score
+            total_points = total_points + points
+
+
         if scores:
-            scores.append(CourseScore("Average", int(total / len(scores) + 0.5)))
+            scores.append(CourseScore("Average", int(total_score / len(scores) + 0.5), total_points / len(scores)))
+
         return scores
 
     def get_average_score(self):
@@ -297,8 +346,12 @@ class Reporter:
                 submission_comment =  "No comment"
                 if assignment.is_missing():
                     status = SubmissionStatus.Missing
-                    print(self.group_max[assignment.group])
-                    possible_gain = -1 * int((self.weightings[assignment.group] * assignment.get_points_dropped()) / (self.group_max[assignment.group] + assignment.get_points_possible()))
+                    # print(assignment.get_name())
+                    # print(self.group_max[assignment.group])
+                    if self.group_max[assignment.group] + assignment.get_points_possible() == 0:
+                        possible_gain = 0
+                    else:
+                        possible_gain = -1 * int((self.weightings[assignment.group] * assignment.get_points_dropped()) / (self.group_max[assignment.group] + assignment.get_points_possible()))
                 #elif assignment.is_late():
                 #    status = SubmissionStatus.Late
                 elif assignment.is_submitted() and assignment.is_graded():

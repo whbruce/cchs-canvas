@@ -93,7 +93,7 @@ def get_reporter(student):
     api_key = config[student]['key']
     user_id = config[student]['id']
     log_level=logging.getLevelName('ERROR')
-    return Reporter(api_key, user_id, log_level)
+    return Reporter(api_key, user_id, None, log_level)
 
 @app.route("/")
 def home():

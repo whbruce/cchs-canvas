@@ -14,6 +14,7 @@ def mm_dd(date):
 
 parser = argparse.ArgumentParser(description='Query Canvas')
 parser.add_argument('--student', type=str.lower, required=True, choices={"alex", "nina"}, help='student first name')
+parser.add_argument('--term', type=str, default=None, help='term (e.g. Spring 2021)')
 parser.add_argument('--date', type=datetime.fromisoformat, default=datetime.today(), help='date in ISO format')
 parser.add_argument('--low', action="store_true", help='list assigmnents with low scores')
 parser.add_argument('--min', type=int, default=4, help='minimum make up in low score report')
@@ -34,7 +35,7 @@ user_id = config[args.student]['id']
 
 # print(args)
 log_level=logging.getLevelName(args.loglevel.upper())
-reporter = Reporter(api_key, user_id, log_level)
+reporter = Reporter(api_key, user_id, args.term, log_level)
 reporter.load_assignments()
 if (args.announcements):
     print("=== Announcements for %s ====" % (mm_dd(args.date)))
@@ -46,7 +47,7 @@ elif args.grades:
     print("\n==== Grades ====")
     scores = reporter.get_course_scores()
     for score in scores:
-        print("%-10s: %3d" % (score.course, score.score))
+        print("%-10s: %3d %1.2f" % (score.course, score.score, score.points))
 elif args.low:
     print("\n==== Assignments with low score ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score, args.min)
