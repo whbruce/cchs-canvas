@@ -55,6 +55,9 @@ class Assignment:
         else:
             self.due_date = None
 
+    def get_course_name(self):
+        return self.course_name
+
     def get_name(self):
         return self.assignment.name
 
@@ -96,7 +99,15 @@ class Assignment:
             return 0
 
     def is_submitted(self):
-        return self.submission.get('submitted_at')
+        return self.submission.get('submitted_at') is not None
+
+    def is_being_marked(self):
+        if not self.is_submitted():
+            return False
+        if not self.is_graded():
+            return False
+        else:
+            return self.submission.get('submitted_at') > self.submission.get('graded_at')
 
     def get_submission_date(self):
         if (self.is_submitted()):
@@ -307,9 +318,16 @@ class Reporter:
         for w in self.weightings:
             self.group_max[w] = 0
         course_groups = {}
+
+        self.logger.info("Weighting first pass")
         for assignment in self.assignments:
             if assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date:
                 group_id = assignment.get_group()
+                self.logger.info(" {}[{}] = {}".format(assignment.get_course_name(), group_id, assignment.get_name()))
+                self.logger.info(" - Checking assignment")
+                self.logger.info("   - valid assignment: {}".format(assignment.is_valid))
+                self.logger.info("   - valid group: {}".format(group_id in self.group_max))
+                self.logger.info("   - graded: {}".format(assignment.is_graded()))
                 if assignment.is_valid and assignment.is_graded() and (group_id in self.group_max) and (assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date):
                     course_id = assignment.course_id
                     if not course_id in course_groups:
@@ -317,9 +335,9 @@ class Reporter:
                     course_group = course_groups[course_id]
                     if group_id not in course_group:
                         course_group.append(group_id)
-                    # print("{} {} {}".format(course_name, group_id, assignment.get_name()))
                     self.group_max[group_id] = self.group_max[group_id] + assignment.get_points_possible()
 
+        self.logger.info("Weighting second pass")
         for course_id in course_groups:
             group = course_groups[course_id]
             if len(group) == 1:
@@ -354,9 +372,10 @@ class Reporter:
                         possible_gain = -1 * int((self.weightings[assignment.group] * assignment.get_points_dropped()) / (self.group_max[assignment.group] + assignment.get_points_possible()))
                 #elif assignment.is_late():
                 #    status = SubmissionStatus.Late
-                elif assignment.is_submitted() and assignment.is_graded():
+                elif assignment.is_graded() and not assignment.is_being_marked():
+                    #print("%s %s %d %d %d" % (assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], possible_gain))
+                    self.logger.info("{} [{}] {} {} {}".format(assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], self.group_max[assignment.group]))
                     possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / self.group_max[assignment.group])
-                    # print("%s %s %d %d %d" % (assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], possible_gain))
                     if possible_gain >= min_gain:
                         status = SubmissionStatus.Low_Score
                         # Getting submission comment is an expensive web service call so only do it for low scores
