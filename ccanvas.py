@@ -73,7 +73,7 @@ class Assignment:
         return self.submission.get('entered_score') is not None
 
     def get_score(self):
-        if self.is_graded():
+        if self.is_graded() and self.assignment.points_possible > 0:
             return (100 * self.submission.get('score')) / self.assignment.points_possible
         else:
             return 0
@@ -111,7 +111,7 @@ class Assignment:
             return None
 
     def is_missing(self):
-        return self.submission.get('missing') and not self.is_graded()
+        return self.submission.get('missing') and (not self.is_graded() or (self.is_graded() and self.get_raw_score() == 0))
 
     def is_late(self):
         return self.submission.get('late') and self.get_score() == 0
