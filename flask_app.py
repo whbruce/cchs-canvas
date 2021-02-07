@@ -24,6 +24,8 @@ class CourseStatusString:
     def __init__(self, c):
         self.course = c.course
         self.score = c.score
+        self.points = int(100*c.points)/100
+        print(self.points)
 
 class AssignmentStatusString:
     def __init__(self, a):
@@ -60,6 +62,7 @@ class AssignmentScoreTable(Table):
 class CourseTable(Table):
     course = Col('Course')
     score = Col('Score')
+    points = Col('GPA')
 
 class AnnouncementTable(Table):
     due = Col('Date')
