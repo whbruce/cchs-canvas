@@ -85,7 +85,7 @@ def run_assignment_report(reporter, query):
     if query == SubmissionStatus.Low_Score:
         table = AssignmentScoreTable
         #report = report[0:12]
-    return to_string_table(report, table)
+    return to_string_table(report, table), len(report)
 
 app = Flask(__name__)
 with open('config.json') as json_file:
@@ -116,16 +116,26 @@ def all():
     student = request.args.get('student')
     reporter = get_reporter(student)
     reporter.load_assignments()
-    scores = to_string_table(reporter.get_course_scores(), CourseTable)
+    summary = {}
+    scores_list = reporter.get_course_scores()
+    scores = to_string_table(scores_list, CourseTable)
     date = datetime.today().astimezone(pytz.timezone('US/Pacific')).strftime("%m/%d/%y %I:%M %p")
-    today = to_string_table(reporter.run_daily_submission_report(datetime.today()), AssignmentStatusTable)
+    today_list = reporter.run_daily_submission_report(datetime.today())
+    today = to_string_table(today_list, AssignmentStatusTable)
     week = to_string_table(reporter.run_calendar_report(datetime.today()), AssignmentTable)
-    missing = run_assignment_report(reporter, SubmissionStatus.Missing)
+    todo = 0
+    for assignment in today_list:
+        print(assignment)
+        if assignment.status == SubmissionStatus.Not_Submitted:
+            todo+=1
+    summary["todo"] = todo
+    missing, summary["missing"] = run_assignment_report(reporter, SubmissionStatus.Missing)
     missing.no_items = "No missing assignments - nice work!"
+    low_score, summary["low"] = run_assignment_report(reporter, SubmissionStatus.Low_Score)
+    summary["gpa"] = scores_list[len(scores_list)-1].points
     #late = run_assignment_report(reporter, SubmissionStatus.Late)
     #late.no_items = "Everything has been marked!"
-    low_score = run_assignment_report(reporter, SubmissionStatus.Low_Score)
-    return render_template('all.html', student=student.capitalize(), date=date, scores=scores, today=today, week=week, missing=missing, low_score=low_score)
+    return render_template('all.html', student=student.capitalize(), date=date, summary=summary, scores=scores, today=today, week=week, missing=missing, low_score=low_score)
 
 @app.route("/scores")
 def scores():
