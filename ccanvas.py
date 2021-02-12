@@ -43,17 +43,18 @@ class Assignment:
         self.assignment = assignment
         self.submission = assignment.submission
         self.submission_comments = "No comments"
-        self.is_valid = self.assignment.points_possible != None \
-                        and self.assignment.due_at \
+        self.due_date = None
+        self.attempts = self.submission.get('attempt')
+        self.is_valid = self.assignment.points_possible is not None \
+                        and self.assignment.points_possible > 0 \
+                        and self.assignment.due_at is not None \
                         and not "Attendance" in self.assignment.name \
                         and not self.submission.get('excused')
-        # self.assignment.submission_type and
         if (self.is_valid):
             self.due_date = convert_date(self.assignment.due_at)
             self.group = assignment.assignment_group_id
-            self.attempts = self.submission.get('attempt')
-        else:
-            self.due_date = None
+        #else:
+        #    print("Invalid: {} {} {} {}".format(self.course_name, self.assignment.name, self.assignment.points_possible, self.submission.get('excused')))
 
     def get_course_name(self):
         return self.course_name
@@ -66,8 +67,8 @@ class Assignment:
 
     def is_due(self, date):
         if not self.is_valid:
-            return False
-        return self.due_date.date() == date.date()
+            return False, False
+        return self.due_date.date() <= date.date(), self.due_date.date() == date.date()
 
     def can_submit(self):
         return 'none' not in self.assignment.submission_types and 'external_tool' not in self.assignment.submission_types
@@ -98,19 +99,24 @@ class Assignment:
         else:
             return 0
 
+    def get_attempts(self):
+        return self.attempts if self.attempts is not None else 0
+
     def is_submitted(self):
-        return self.submission.get('submitted_at') is not None
+        return self.get_attempts() > 0 or self.get_score() > 0
 
     def is_being_marked(self):
         if not self.is_submitted():
             return False
         if not self.is_graded():
             return False
-        else:
+        if self.submission.get('submitted_at') is not None:
             return self.submission.get('submitted_at') > self.submission.get('graded_at')
+        else:
+            return False
 
     def get_submission_date(self):
-        if (self.is_submitted()):
+        if self.submission.get('submitted_at') is not None:
             return convert_date(self.submission.get('submitted_at'))
         else:
             return None
@@ -122,16 +128,16 @@ class Assignment:
             return None
 
     def is_missing(self):
-        return self.submission.get('missing') and (not self.is_graded() or (self.is_graded() and self.get_raw_score() == 0))
+        now = datetime.today().astimezone(pytz.timezone('US/Pacific'))
+        #print("is_missing: %s %s %s %s %s %s" % (self.course_name, self.assignment.name, now, self.get_due_date(), self.is_due(now)[0], self.is_submitted()))
+        return (self.submission.get('missing') and (not self.is_graded() or (self.is_graded() and self.get_raw_score() == 0))) \
+               or (self.is_due(now)[0] and not self.is_submitted())
 
     def is_late(self):
         return self.submission.get('late') and self.get_score() == 0
 
     def get_group(self):
         return self.group
-
-    def get_attempts(self):
-        return self.attempts if self.attempts is not None else 0
 
 
 class Announcement(NamedTuple):
@@ -301,7 +307,9 @@ class Reporter:
         date = date.astimezone(pytz.timezone('US/Pacific'))
         status_list = []
         for assignment in self.assignments:
-            if assignment.is_due(date):
+            is_due, is_due_on_date = assignment.is_due(date)
+            # print("{} {} {}".format(assignment.get_name(), assignment.get_due_date().date(), date.date()))
+            if is_due_on_date:
                 if assignment.is_graded():
                     state = SubmissionStatus.Marked
                 elif not assignment.can_submit():
@@ -328,6 +336,7 @@ class Reporter:
                 self.logger.info("   - valid assignment: {}".format(assignment.is_valid))
                 self.logger.info("   - valid group: {}".format(group_id in self.group_max))
                 self.logger.info("   - graded: {}".format(assignment.is_graded()))
+                self.logger.info("   - score: {}".format(assignment.get_score()))
                 if assignment.is_valid and assignment.is_graded() and (group_id in self.group_max) and (assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date):
                     course_id = assignment.course_id
                     if not course_id in course_groups:
