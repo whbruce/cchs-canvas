@@ -159,6 +159,7 @@ class SubmissionStatus(Enum):
     Late = 5
     Low_Score = 6
     External = 7
+    Being_Marked = 8
 
 class AssignmentStatus():
     def __init__(self, assignment, status, possible_gain = None, submission_comment = None):
@@ -392,6 +393,8 @@ class Reporter:
                         comments = submission.submission_comments
                         if comments:
                             submission_comment = comments[0].get('comment')
+                elif assignment.is_being_marked():
+                    status = SubmissionStatus.Being_Marked
                 if (status):
                     status_list.append(AssignmentStatus(assignment, status, possible_gain, submission_comment))
 
@@ -417,8 +420,9 @@ class Reporter:
         for assignment in report:
             if (assignment.status == filter):
                 filtered_report.append(assignment)
-        if (filter == SubmissionStatus.Low_Score):
-            filtered_report.sort(key=lambda a: a.possible_gain, reverse=True)
+        if (filter in [SubmissionStatus.Low_Score, SubmissionStatus.Missing]):
+            reverse = filter == SubmissionStatus.Low_Score
+            filtered_report.sort(key=lambda a: a.possible_gain, reverse=reverse)
         return filtered_report
 
 
