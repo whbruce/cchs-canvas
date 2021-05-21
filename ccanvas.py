@@ -269,7 +269,8 @@ class Reporter:
                     score = int(e.grades.get('current_score') + 0.5)
                     is_honors = self.is_honors_course(full_name)
                     points = self.get_points(score, is_honors)
-                    scores.append(CourseScore(name, score, points))
+                    if CourseScore(name, score, points) not in scores:
+                        scores.append(CourseScore(name, score, points))
                     total_score = total_score + score
                     total_points = total_points + points
 
@@ -280,7 +281,6 @@ class Reporter:
             scores.append(CourseScore("Algebra", score, points))
             total_score = total_score + score
             total_points = total_points + points
-
 
         if scores:
             scores.append(CourseScore("Average", int(total_score / len(scores) + 0.5), total_points / len(scores)))
