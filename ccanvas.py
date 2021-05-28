@@ -430,7 +430,7 @@ class Reporter:
         calendar =  self.check_calendar(start, end)
         return(sorted(calendar, key=lambda a: a.due_date))
 
-    def run_assignment_report(self, filter, min_gain=3):
+    def run_assignment_report(self, filter, min_gain=2):
         filtered_report = []
         yesterday = datetime.today().astimezone(pytz.timezone('US/Pacific')).replace(hour=0, minute=0)
         if not self.report:
