@@ -98,7 +98,10 @@ else:
 
 print("=== Get assignment test ===")
 assignment = reporter.get_assignment(6709, 196436)
-print("{}: {}".format(assignment.get_course_name(), assignment.get_name()))
-for comment in assignment.submission_comments:
-    print("%s %s %s" % (comment.author, mm_dd(comment.date), comment.text))
+if assignment:
+    print("{}: {}".format(assignment.get_course_name(), assignment.get_name()))
+    for comment in assignment.submission_comments:
+        print("%s %s %s" % (comment.author, mm_dd(comment.date), comment.text))
+else:
+    print("reporter.get_assignment(6709, 196436) failed")
 
