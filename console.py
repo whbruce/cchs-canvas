@@ -38,13 +38,8 @@ user_id = config[args.student]['id']
 log_level=logging.getLevelName(args.loglevel.upper())
 reporter = Reporter(api_key, user_id, args.term, log_level)
 reporter.load_assignments()
-if (args.announcements):
-    print("=== Announcements for %s ====" % (mm_dd(args.date)))
-    get_announcements = reporter.get_announcements()
-    for a in get_announcements:
-        print("%-8.8s: %s" % (a.course, a.title))
-    print("\n")
-elif args.grades:
+
+if args.grades:
     print("\n==== Grades ====")
     scores = reporter.get_course_scores()
     for score in scores:
@@ -53,12 +48,16 @@ elif args.low:
     print("\n==== Assignments with low score ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score, args.min)
     for status in status_list:
-        print("%-10s: %-25.25s %s %s %s %d [%d%%] %s" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date), mm_dd(status.graded_date), status.attempts, status.possible_gain, status.submission_comment))
+        print("%-10s: %-25.25s %s %s %s %d [%d%%]" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date), mm_dd(status.graded_date), status.attempts, status.possible_gain))
+        for comment in status.submission_comments:
+            print("  - %s %s %s" % (comment.author, mm_dd(comment.date), comment.text))
 elif args.missing:
     print("\n==== Missing assignments ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Missing)
     for status in status_list:
         print("%-8s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
+        for comment in status.submission_comments:
+            print("  - %s %s %s" % (comment.author, mm_dd(comment.date), comment.text))
 elif args.being_marked:
     print("\n==== Assignments Being Marked ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Being_Marked)
@@ -68,8 +67,6 @@ elif args.calendar:
     status_list = reporter.run_calendar_report(datetime.today())
     for status in status_list:
         print("%-9s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
-elif args.submissions:
-    reporter.run_submission_report()
 elif args.all:
     print("\n=== To-day ====")
     status_list = reporter.run_daily_submission_report(args.date)
@@ -98,4 +95,10 @@ else:
     for status in status_list:
         state = status.status.name + " (%d%%)" % (status.score) if status.status == SubmissionStatus.Marked else status.status.name
         print("%-8s: %-25.25s [%s]" % (status.course, status.name, state))
+
+print("=== Get assignment test ===")
+assignment = reporter.get_assignment(6709, 196436)
+print("{}: {}".format(assignment.get_course_name(), assignment.get_name()))
+for comment in assignment.submission_comments:
+    print("%s %s %s" % (comment.author, mm_dd(comment.date), comment.text))
 

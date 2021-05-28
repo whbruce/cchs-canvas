@@ -36,15 +36,25 @@ def convert_date(canvas_date):
     return date.replace(tzinfo=pytz.UTC)
 
 
+class Comment:
+    def __init__(self, comment):
+        self.author = comment["author_name"].split()[0]
+        self.date = convert_date(comment["created_at"])
+        text = comment["comment"].replace('\n', ' ')
+        self.text = text
+
 class Assignment:
     def __init__(self, course, assignment):
         self.course_name = course_short_name(course.name)
         self.course_id = course.id
         self.assignment = assignment
+        self.id = assignment.id
         self.submission = assignment.submission
-        self.submission_comments = "No comments"
+        self.submission_comments = []
         self.due_date = None
+        self.status = SubmissionStatus.Not_Submitted
         self.attempts = self.submission.get('attempt')
+        self.possible_gain = 0
         self.is_valid = self.assignment.points_possible is not None \
                         and self.assignment.points_possible > 0 \
                         and self.assignment.due_at is not None \
@@ -162,18 +172,20 @@ class SubmissionStatus(Enum):
     Being_Marked = 8
 
 class AssignmentStatus():
-    def __init__(self, assignment, status, possible_gain = None, submission_comment = None):
+    def __init__(self, assignment):
+        self.course_id = assignment.course_id
         self.course = assignment.course_name
+        self.id = assignment.id
         self.name = assignment.get_name()
         self.due_date = assignment.get_due_date()
         self.score = assignment.get_score()
         self.submission_date = assignment.get_submission_date()
         self.graded_date = assignment.get_graded_date()
-        self.status = status
+        self.status = assignment.status
         self.dropped = assignment.get_points_dropped()
-        self.possible_gain = possible_gain
+        self.possible_gain = assignment.possible_gain
         self.attempts = assignment.get_attempts()
-        self.submission_comment = submission_comment
+        self.submission_comments = assignment.submission_comments
 
 # Examples
 # Physics submitted      https://cchs.instructure.com/courses/5347/assignments/160100/submissions/5573
@@ -204,8 +216,8 @@ class Reporter:
         self.weightings = self.get_assignments_weightings()
         for w in self.weightings:
             self.group_max[w] = 0
-        self.assignments = None
         self.report = None
+        self.assignments = []
 
     def load_assignments(self):
         self.assignments = []
@@ -220,8 +232,11 @@ class Reporter:
                     if assignment.is_valid:
                         self.assignments.append(assignment)
 
-    def reset(self):
-        self.report = None
+    def get_assignment(self, course_id, id):
+        for assignment in self.assignments:
+            if assignment.course_id == course_id and assignment.id == id:
+                return assignment
+        return None
 
     def course_short_name(self, course):
         name = course if isinstance(course, str) else course.name
@@ -301,7 +316,8 @@ class Reporter:
         for assignment in self.assignments:
             due_date = assignment.get_due_date()
             if (due_date > start) and (due_date < end) and assignment.get_points_possible() > 0:
-                status_list.append(AssignmentStatus(assignment, SubmissionStatus.Not_Submitted, assignment.get_points_possible()))
+                assignment.possible_gain = assignment.get_points_possible()
+                status_list.append(AssignmentStatus(assignment))
         return status_list
 
     def check_daily_course_submissions(self, date):
@@ -319,7 +335,8 @@ class Reporter:
                     state = SubmissionStatus.Submitted
                 else:
                     state = SubmissionStatus.Not_Submitted
-                status_list.append(AssignmentStatus(assignment, state, 0))
+                assignment.status = state
+                status_list.append(AssignmentStatus(assignment))
         return status_list
 
     # Re-calculate weightings in case some some weights are not yet in use
@@ -366,12 +383,11 @@ class Reporter:
     def check_course_assigments(self, end_date, min_gain):
         self.update_weightings(end_date)
         status_list = []
-        for assignment in self.assignments:
+        for i, assignment in enumerate(self.assignments):
             group_id = assignment.get_group()
             if assignment.is_valid and (group_id in self.group_max) and (assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date):
                 status = None
                 possible_gain = 0
-                submission_comment =  "No comment"
                 if assignment.is_missing():
                     status = SubmissionStatus.Missing
                     # print(assignment.get_name())
@@ -388,15 +404,16 @@ class Reporter:
                     possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / self.group_max[assignment.group])
                     if possible_gain >= min_gain:
                         status = SubmissionStatus.Low_Score
-                        # Getting submission comment is an expensive web service call so only do it for low scores
-                        submission = assignment.assignment.get_submission(self.user, include=["submission_comments"])
-                        comments = submission.submission_comments
-                        if comments:
-                            submission_comment = comments[0].get('comment')
                 elif assignment.is_being_marked():
                     status = SubmissionStatus.Being_Marked
                 if (status):
-                    status_list.append(AssignmentStatus(assignment, status, possible_gain, submission_comment))
+                    submission = assignment.assignment.get_submission(self.user, include=["submission_comments"])
+                    for comment in submission.submission_comments:
+                        assignment.submission_comments.append(Comment(comment))
+                    assignment.status = status
+                    assignment.possible_gain = possible_gain
+                    self.assignments[i] = assignment
+                    status_list.append(AssignmentStatus(assignment))
 
         return status_list
 
@@ -416,8 +433,9 @@ class Reporter:
     def run_assignment_report(self, filter, min_gain=3):
         filtered_report = []
         yesterday = datetime.today().astimezone(pytz.timezone('US/Pacific')).replace(hour=0, minute=0)
-        report = self.check_course_assigments(yesterday, min_gain)
-        for assignment in report:
+        if not self.report:
+            self.report = self.check_course_assigments(yesterday, min_gain)
+        for assignment in self.report:
             if (assignment.status == filter):
                 filtered_report.append(assignment)
         if (filter in [SubmissionStatus.Low_Score, SubmissionStatus.Missing]):
