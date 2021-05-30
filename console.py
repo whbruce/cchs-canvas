@@ -53,7 +53,7 @@ elif args.low:
             print("  - %s %s %s" % (comment.author, mm_dd(comment.date), comment.text))
 elif args.missing:
     print("\n==== Missing assignments ====")
-    status_list = reporter.run_assignment_report(SubmissionStatus.Missing)
+    status_list = reporter.run_assignment_report(SubmissionStatus.Missing, 1)
     for status in status_list:
         print("%-8s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
         for comment in status.submission_comments:

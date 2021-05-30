@@ -233,9 +233,11 @@ class Reporter:
                         self.assignments.append(assignment)
 
     def get_assignment(self, course_id, id):
+        print("Searching for assignment with course_id {} and id {}".format(course_id, id))
         for assignment in self.assignments:
             if assignment.course_id == course_id and assignment.id == id:
                 return assignment
+        print("Assignment not found")
         return None
 
     def course_short_name(self, course):
@@ -286,8 +288,8 @@ class Reporter:
                     points = self.get_points(score, is_honors)
                     if CourseScore(name, score, points) not in scores:
                         scores.append(CourseScore(name, score, points))
-                    total_score = total_score + score
-                    total_points = total_points + points
+                        total_score = total_score + score
+                        total_points = total_points + points
 
         # Fixing for missing score due to Canvas error
         if self.user_id == 5573 and self.term == "Fall 2020":
@@ -389,13 +391,14 @@ class Reporter:
                 status = None
                 possible_gain = 0
                 if assignment.is_missing():
-                    status = SubmissionStatus.Missing
                     # print(assignment.get_name())
                     # print(self.group_max[assignment.group])
                     if self.group_max[assignment.group] + assignment.get_points_possible() == 0:
                         possible_gain = 0
                     else:
-                        possible_gain = -1 * int((self.weightings[assignment.group] * assignment.get_points_dropped()) / (self.group_max[assignment.group] + assignment.get_points_possible()))
+                        possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / (self.group_max[assignment.group] + assignment.get_points_possible()))
+                    if possible_gain >= min_gain:
+                        status = SubmissionStatus.Missing
                 #elif assignment.is_late():
                 #    status = SubmissionStatus.Late
                 elif assignment.is_graded() and not assignment.is_being_marked():
@@ -406,12 +409,14 @@ class Reporter:
                         status = SubmissionStatus.Low_Score
                 elif assignment.is_being_marked():
                     status = SubmissionStatus.Being_Marked
-                if (status):
+                if status:
                     submission = assignment.assignment.get_submission(self.user, include=["submission_comments"])
                     for comment in submission.submission_comments:
                         assignment.submission_comments.append(Comment(comment))
                     assignment.status = status
                     assignment.possible_gain = possible_gain
+                    if status == SubmissionStatus.Missing:
+                        assignment.possible_gain = -1 * possible_gain
                     self.assignments[i] = assignment
                     status_list.append(AssignmentStatus(assignment))
 

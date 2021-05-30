@@ -118,9 +118,9 @@ def to_string_table(assignments, layout):
         table.append(entry_type(a))
     return layout(table)
 
-def run_assignment_report(reporter, query):
+def run_assignment_report(reporter, query, min_score):
     table = AssignmentTable
-    report = reporter.run_assignment_report(query)
+    report = reporter.run_assignment_report(query, min_score)
     return to_string_table(report, table), len(report)
 
 app = Flask(__name__)
@@ -166,10 +166,10 @@ def all():
         if assignment.status == SubmissionStatus.Not_Submitted:
             todo+=1
     summary["todo"] = todo
-    missing, summary["missing"] = run_assignment_report(reporter, SubmissionStatus.Missing)
+    missing, summary["missing"] = run_assignment_report(reporter, SubmissionStatus.Missing, 1)
     missing.no_items = "No missing assignments - nice work!"
-    low_score, summary["low"] = run_assignment_report(reporter, SubmissionStatus.Low_Score)
-    being_marked, summary["being_marked"] = run_assignment_report(reporter, SubmissionStatus.Being_Marked)
+    low_score, summary["low"] = run_assignment_report(reporter, SubmissionStatus.Low_Score, 2)
+    being_marked, summary["being_marked"] = run_assignment_report(reporter, SubmissionStatus.Being_Marked, 0)
     summary["gpa"] = scores_list[len(scores_list)-1].points
     #late = run_assignment_report(reporter, SubmissionStatus.Late)
     #late.no_items = "Everything has been marked!"
