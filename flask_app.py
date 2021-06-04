@@ -124,15 +124,6 @@ def run_assignment_report(reporter, query, min_score):
     return to_string_table(report, table), len(report)
 
 app = Flask(__name__)
-#with open('config.json') as json_file:
-#    config = json.load(json_file)
-
-def get_reporter(student):
-    student = student.lower()
-    api_key = config[student]['key']
-    user_id = config[student]['id']
-    log_level=logging.getLevelName('ERROR')
-    return Reporter(api_key, user_id, None, log_level)
 
 @app.route("/")
 def home():
@@ -162,7 +153,6 @@ def all():
     week = to_string_table(reporter.run_calendar_report(datetime.today()), AssignmentTable)
     todo = 0
     for assignment in today_list:
-        print(assignment)
         if assignment.status == SubmissionStatus.Not_Submitted:
             todo+=1
     summary["todo"] = todo
