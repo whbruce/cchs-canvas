@@ -267,6 +267,7 @@ class Reporter:
         print("Searching for assignment with course_id {} and id {}".format(course_id, id))
         for assignment in self.assignments:
             if assignment.course_id == course_id and assignment.id == id:
+                assignment.populate_comments()
                 return assignment
         print("Assignment not found")
         return None
