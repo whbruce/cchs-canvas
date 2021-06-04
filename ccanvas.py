@@ -13,6 +13,7 @@ from canvasapi import Canvas
 from canvasapi import exceptions
 from datetime import datetime
 from datetime import timedelta
+from datetime import date as datetime_date
 import tempfile
 import pptx
 
@@ -44,13 +45,15 @@ class Comment:
         self.text = text
 
 class Assignment:
-    def __init__(self, course, assignment):
+    def __init__(self, user, course, assignment):
+        self.user = user
         self.course_name = course_short_name(course.name)
         self.course_id = course.id
         self.assignment = assignment
         self.id = assignment.id
         self.submission = assignment.submission
-        self.submission_comments = []
+        self.submission_date = None
+        self.submission_comments = None
         self.due_date = None
         self.status = SubmissionStatus.Not_Submitted
         self.attempts = self.submission.get('attempt')
@@ -65,6 +68,13 @@ class Assignment:
             self.group = assignment.assignment_group_id
         #else:
         #    print("Invalid: {} {} {} {}".format(self.course_name, self.assignment.name, self.assignment.points_possible, self.submission.get('excused')))
+
+    def populate_comments(self):
+        if self.submission_comments is None:
+            self.submission_comments = []
+            submission = self.assignment.get_submission(self.user, include=["submission_comments"])
+            for comment in submission.submission_comments:
+                self.submission_comments.append(Comment(comment))
 
     def get_course_name(self):
         return self.course_name
@@ -81,7 +91,10 @@ class Assignment:
         return self.due_date.date() <= date.date(), self.due_date.date() == date.date()
 
     def can_submit(self):
-        return 'none' not in self.assignment.submission_types and 'external_tool' not in self.assignment.submission_types
+        for submission_type in self.assignment.submission_types:
+            if submission_type in ['none', 'external_tool', 'on_paper']:
+                return False
+        return True
 
     def is_graded(self):
         return self.submission.get('entered_score') is not None
@@ -113,7 +126,10 @@ class Assignment:
         return self.attempts if self.attempts is not None else 0
 
     def is_submitted(self):
-        return self.get_attempts() > 0 or self.get_score() > 0
+        if self.get_attempts() == 0 and self.get_score() == 0:
+            return self.get_submission_date() is not None
+        else:
+            return True
 
     def is_being_marked(self):
         if not self.is_submitted():
@@ -126,10 +142,25 @@ class Assignment:
             return False
 
     def get_submission_date(self):
-        if self.submission.get('submitted_at') is not None:
-            return convert_date(self.submission.get('submitted_at'))
+        if self.submission_date:
+            return self.submission_date
+        if self.submission.get('submitted_at') is None:
+            date = None
+            self.populate_comments()
+            for comment in self.submission_comments:
+                if comment.text.startswith("Submitted"):
+                    text = comment.text.split(' ')
+                    if len(text) > 1:
+                        try:
+                            fmt = "%m/%d"
+                            date = datetime.strptime(text[1], fmt)
+                            self.submission_date = date.replace(year=datetime_date.today().year)
+                            # print("{} submitted at {}".format(self.get_name(), self.submission_date))
+                        except ValueError:
+                            print("Error: {} is not in mm/dd format", text[1])
+            return date
         else:
-            return None
+            return convert_date(self.submission.get('submitted_at'))
 
     def get_graded_date(self):
         if (self.is_graded()):
@@ -227,7 +258,7 @@ class Reporter:
                 self.logger.info("Loading {} assignments".format(course_name))
                 raw_assignments = course.get_assignments(order_by="due_at", include=["submission"])
                 for a in raw_assignments:
-                    assignment = Assignment(course, a)
+                    assignment = Assignment(self.user, course, a)
                     # print("%s %s %s %s" % (assignment.get_due_date(), course_name, a, assignment.is_valid))
                     if assignment.is_valid:
                         self.assignments.append(assignment)
@@ -410,9 +441,7 @@ class Reporter:
                 elif assignment.is_being_marked():
                     status = SubmissionStatus.Being_Marked
                 if status:
-                    submission = assignment.assignment.get_submission(self.user, include=["submission_comments"])
-                    for comment in submission.submission_comments:
-                        assignment.submission_comments.append(Comment(comment))
+                    assignment.populate_comments()
                     assignment.status = status
                     assignment.possible_gain = possible_gain
                     if status == SubmissionStatus.Missing:
