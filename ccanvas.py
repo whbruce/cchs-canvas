@@ -155,7 +155,7 @@ class Assignment:
                             fmt = "%m/%d"
                             date = datetime.strptime(text[1], fmt)
                             self.submission_date = date.replace(year=datetime_date.today().year)
-                            # print("{} submitted at {}".format(self.get_name(), self.submission_date))
+                            print("{} submitted at {}".format(self.get_name(), self.submission_date))
                         except ValueError:
                             print("Error: {} is not in mm/dd format", text[1])
             return date
@@ -171,7 +171,7 @@ class Assignment:
     def is_missing(self):
         now = datetime.today().astimezone(pytz.timezone('US/Pacific'))
         #print("is_missing: %s %s %s %s %s %s" % (self.course_name, self.assignment.name, now, self.get_due_date(), self.is_due(now)[0], self.is_submitted()))
-        return (self.submission.get('missing') and (not self.is_graded() or (self.is_graded() and self.get_raw_score() == 0))) \
+        return (self.submission.get('missing') and not self.get_submission_date() and (not self.is_graded() or (self.is_graded() and self.get_raw_score() == 0))) \
                or (self.is_due(now)[0] and not self.is_submitted())
 
     def is_late(self):
