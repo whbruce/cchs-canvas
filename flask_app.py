@@ -126,9 +126,10 @@ def to_string_table(assignments, layout):
         table.append(entry_type(a))
     return layout(table)
 
-def run_assignment_report(reporter, query, min_score):
+def run_assignment_report(reporter, query, min_gain):
+    print("run_assignment_report min_gain {}".format(min_gain))
     table = AssignmentTable
-    report = reporter.run_assignment_report(query, min_score)
+    report = reporter.run_assignment_report(query, min_gain)
     return to_string_table(report, table), len(report)
 
 logging.basicConfig(level=logging.INFO)
@@ -149,8 +150,10 @@ def single_item(course_id, assignment_id):
 @app.route("/all")
 def all():
     student = request.args.get('student')
+    low_min_gain = int(request.args.get('min_gain'))
+    missing_min_gain = int(request.args.get('include_zero_scores') is None)
+    print(missing_min_gain, request.args.get('include_zero_scores'), missing_min_gain)
     reporter = ReporterFactory.create(student)
-    print("loading")
     reporter.load_assignments()
     summary = {}
     scores_list = reporter.get_course_scores()
@@ -164,9 +167,9 @@ def all():
         if assignment.status == SubmissionStatus.Not_Submitted:
             todo+=1
     summary["todo"] = todo
-    missing, summary["missing"] = run_assignment_report(reporter, SubmissionStatus.Missing, 1)
+    missing, summary["missing"] = run_assignment_report(reporter, SubmissionStatus.Missing, missing_min_gain)
     missing.no_items = "No missing assignments - nice work!"
-    low_score, summary["low"] = run_assignment_report(reporter, SubmissionStatus.Low_Score, 2)
+    low_score, summary["low"] = run_assignment_report(reporter, SubmissionStatus.Low_Score, low_min_gain)
     being_marked, summary["being_marked"] = run_assignment_report(reporter, SubmissionStatus.Being_Marked, 0)
     summary["gpa"] = scores_list[len(scores_list)-1].points
     #late = run_assignment_report(reporter, SubmissionStatus.Late)

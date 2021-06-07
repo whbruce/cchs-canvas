@@ -433,24 +433,22 @@ class Reporter:
                         possible_gain = 0
                     else:
                         possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / (self.group_max[assignment.group] + assignment.get_points_possible()))
-                    if possible_gain >= min_gain:
-                        status = SubmissionStatus.Missing
+                    status = SubmissionStatus.Missing
                 #elif assignment.is_late():
                 #    status = SubmissionStatus.Late
                 elif assignment.is_graded() and not assignment.is_being_marked():
                     #print("%s %s %d %d %d" % (assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], possible_gain))
                     self.logger.info("{} [{}] {} {} {}".format(assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], self.group_max[assignment.group]))
                     possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / self.group_max[assignment.group])
-                    if possible_gain >= min_gain:
-                        status = SubmissionStatus.Low_Score
+                    status = SubmissionStatus.Low_Score
                 elif assignment.is_being_marked():
                     status = SubmissionStatus.Being_Marked
                 if status:
                     assignment.populate_comments()
                     assignment.status = status
                     assignment.possible_gain = possible_gain
-                    if status == SubmissionStatus.Missing:
-                        assignment.possible_gain = -1 * possible_gain
+                    #if status == SubmissionStatus.Missing:
+                    #    assignment.possible_gain = -1 * possible_gain
                     self.assignments[i] = assignment
                     status_list.append(AssignmentStatus(assignment))
 
@@ -469,17 +467,19 @@ class Reporter:
         calendar =  self.check_calendar(start, end)
         return(sorted(calendar, key=lambda a: a.due_date))
 
-    def run_assignment_report(self, filter, min_gain=2):
+    def run_assignment_report(self, filter, min_gain):
         filtered_report = []
         yesterday = datetime.today().astimezone(pytz.timezone('US/Pacific')).replace(hour=0, minute=0)
         if not self.report:
-            self.report = self.check_course_assigments(yesterday, min_gain)
+            self.report = self.check_course_assigments(yesterday, 1)
         for assignment in self.report:
             if (assignment.status == filter):
                 filtered_report.append(assignment)
-        if (filter in [SubmissionStatus.Low_Score, SubmissionStatus.Missing]):
-            reverse = filter == SubmissionStatus.Low_Score
-            filtered_report.sort(key=lambda a: a.possible_gain, reverse=reverse)
+                if (filter in [SubmissionStatus.Low_Score, SubmissionStatus.Missing]) and (min_gain > assignment.possible_gain):
+                    filtered_report.pop()
+        if filter in [SubmissionStatus.Low_Score, SubmissionStatus.Missing]:
+            #reverse = filter == SubmissionStatus.Low_Score
+            filtered_report.sort(key=lambda a: a.possible_gain, reverse=True)
         return filtered_report
 
 

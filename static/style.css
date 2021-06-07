@@ -5,3 +5,11 @@ table {
 table, th, td {
   border: 1px solid black;
 }
+
+#student, #gain, #submit, #include_zero {
+  border-bottom: solid #FFF 5px;
+}
+
+div{width: 150px;}
+.css-checkbox {float: right;}
+.css-label {display: block; text-align: right;}
