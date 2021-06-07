@@ -10,20 +10,26 @@ import markdown
 import logging
 
 class ReporterFactory(object):
+    students = {}
     instances = {}
     current_student = None
 
     @staticmethod
+    def get_students():
+        if not ReporterFactory.students:
+            with open('config.json') as json_file:
+                ReporterFactory.students = json.load(json_file)
+        return ReporterFactory.students.keys()
+
+    @staticmethod
     def create(student):
         if not student in ReporterFactory.instances:
-            with open('config.json') as json_file:
-                config = json.load(json_file)
+            ReporterFactory.get_students()
             student = student.lower()
-            api_key = config[student]['key']
-            user_id = config[student]['id']
-            log_level=logging.getLevelName('ERROR')
+            api_key = ReporterFactory.students[student]['key']
+            user_id = ReporterFactory.students[student]['id']
             ReporterFactory.current_student = student
-            ReporterFactory.instances[student] = Reporter(api_key, user_id, None, log_level)
+            ReporterFactory.instances[student] = Reporter(api_key, user_id, term=None)
         return ReporterFactory.instances[student]
 
     @staticmethod
@@ -48,6 +54,7 @@ class CourseStatusString:
         self.course = c.course
         self.score = c.score
         self.points = int(100*c.points)/100
+        self.weighted_points = int(100*c.weighted_points)/100
 
 class AssignmentStatusString:
     def __init__(self, a):
@@ -96,6 +103,7 @@ class CourseTable(Table):
     course = Col('Course')
     score = Col('Score')
     points = Col('GPA')
+    weighted_points = Col('WGPA')
 
 class AnnouncementTable(Table):
     due = Col('Date')
@@ -123,13 +131,12 @@ def run_assignment_report(reporter, query, min_score):
     report = reporter.run_assignment_report(query, min_score)
     return to_string_table(report, table), len(report)
 
+logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    with open('config.json') as json_file:
-        config = json.load(json_file)
-    return render_template('index.html', students = config.keys())
+    return render_template('index.html', students = ReporterFactory.get_students())
 
 @app.route('/assignment/<int:course_id>/<int:assignment_id>')
 def single_item(course_id, assignment_id):
@@ -143,6 +150,7 @@ def single_item(course_id, assignment_id):
 def all():
     student = request.args.get('student')
     reporter = ReporterFactory.create(student)
+    print("loading")
     reporter.load_assignments()
     summary = {}
     scores_list = reporter.get_course_scores()

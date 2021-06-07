@@ -35,15 +35,15 @@ api_key = config[args.student]['key']
 user_id = config[args.student]['id']
 
 # print(args)
-log_level=logging.getLevelName(args.loglevel.upper())
-reporter = Reporter(api_key, user_id, args.term, log_level)
+logging.basicConfig(level=logging.getLevelName(args.loglevel.upper()))
+reporter = Reporter(api_key, user_id, args.term)
 reporter.load_assignments()
 
 if args.grades:
     print("\n==== Grades ====")
     scores = reporter.get_course_scores()
     for score in scores:
-        print("%-10s: %3d %1.2f" % (score.course, score.score, score.points))
+        print("%-10s: %3d %1.2f %1.2f" % (score.course, score.score, score.points, score.weighted_points))
 elif args.low:
     print("\n==== Assignments with low score ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score, args.min)

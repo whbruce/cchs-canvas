@@ -46,6 +46,7 @@ class Comment:
 
 class Assignment:
     def __init__(self, user, course, assignment):
+        self.logger = logging.getLogger(__name__)
         self.user = user
         self.course_name = course_short_name(course.name)
         self.course_id = course.id
@@ -155,9 +156,9 @@ class Assignment:
                             fmt = "%m/%d"
                             date = datetime.strptime(text[1], fmt)
                             self.submission_date = date.replace(year=datetime_date.today().year)
-                            print("{} submitted at {}".format(self.get_name(), self.submission_date))
+                            self.logger.info("{} submitted at {}".format(self.get_name(), self.submission_date))
                         except ValueError:
-                            print("Error: {} is not in mm/dd format", text[1])
+                            self.logger.error("Manual submission date for {} is {}, not in mm/dd format".format(self.get_name(), text[1]))
             return date
         else:
             return convert_date(self.submission.get('submitted_at'))
@@ -191,6 +192,7 @@ class CourseScore(NamedTuple):
     course: str
     score: int
     points: float
+    weighted_points: float
 
 class SubmissionStatus(Enum):
     Submitted = 1
@@ -224,8 +226,7 @@ class AssignmentStatus():
 # Geometry not submitted https://cchs.instructure.com/courses/5205/assignments/159972/submissions/5573
 # Wellness no submission https://cchs.instructure.com/courses/5237/assignments/158002/submissions/5573
 class Reporter:
-    def __init__(self, api_key, user_id, term, log_level):
-        logging.basicConfig(level=log_level)
+    def __init__(self, api_key, user_id, term):
         self.logger = logging.getLogger(__name__)
         self.user_id = user_id
         self.canvas = Canvas(API_URL, api_key)
@@ -287,29 +288,27 @@ class Reporter:
 
     def get_points(self, score, is_honors):
         table  = [
-            (97, 4.30),
-            (93, 4.00),
-            (90, 3.70),
-            (87, 3.30),
-            (83, 3.00),
-            (80, 2.70),
-            (77, 2.30),
-            (73, 2.00),
-            (70, 1.70),
-            (67, 1.30),
-            (63, 1.00),
-            (60, 0.70),
-            (0, 0.0)
+            (97, 4.30, 4),
+            (93, 4.00, 4),
+            (90, 3.70, 4),
+            (87, 3.30, 3),
+            (83, 3.00, 3),
+            (80, 2.70, 3),
+            (77, 2.30, 2),
+            (73, 2.00, 2),
+            (70, 1.70, 2),
+            (67, 1.30, 1),
+            (63, 1.00, 1),
+            (60, 0.70, 1),
+            (0,  0.0, 0)
         ]
         for entry in table:
             if score >= entry[0]:
-                return entry[1] + (0.5 * is_honors)
+                return entry[1] + (0.5 * is_honors), entry[2] + (0.5 * is_honors)
 
     def get_course_scores(self):
         enrollments = self.user.get_enrollments(state=["current_and_concluded"])
         scores = []
-        total_score = 0
-        total_points = 0.0
         for e in enrollments:
             if e.course_id in self.course_dict:
                 full_name = self.course_dict[e.course_id]
@@ -318,21 +317,26 @@ class Reporter:
                     score = int(e.grades.get('current_score') + 0.5)
                     is_honors = self.is_honors_course(full_name)
                     points = self.get_points(score, is_honors)
-                    if CourseScore(name, score, points) not in scores:
-                        scores.append(CourseScore(name, score, points))
-                        total_score = total_score + score
-                        total_points = total_points + points
+                    if CourseScore(name, score, points[0], points[1]) not in scores:
+                        scores.append(CourseScore(name, score, points[0], points[1]))
 
         # Fixing for missing score due to Canvas error
         if self.user_id == 5573 and self.term == "Fall 2020":
             score = 90
             points = self.get_points(score, False)
-            scores.append(CourseScore("Algebra", score, points))
+            scores.append(CourseScore("Algebra", score, points[0], points[1]))
             total_score = total_score + score
-            total_points = total_points + points
+            total_points = total_points + points[0]
 
         if scores:
-            scores.append(CourseScore("Average", int(total_score / len(scores) + 0.5), total_points / len(scores)))
+            total_score = 0
+            total_points = 0.0
+            total_weighted_points = 0.0
+            for score in scores:
+                total_score += score.score
+                total_points += score.points
+                total_weighted_points += score.weighted_points
+            scores.append(CourseScore("Average", int(total_score / len(scores) + 0.5), total_points / len(scores), total_weighted_points / len(scores)))
 
         return scores
 
