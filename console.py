@@ -24,6 +24,7 @@ parser.add_argument('--attention', action="store_true", help='list assigments ne
 parser.add_argument('--calendar', action="store_true", help='list forthcoming assignments')
 parser.add_argument('--all', action="store_true", help='check for missing assignments')
 parser.add_argument('--grades', action="store_true", help='list course scores')
+parser.add_argument('--service', action="store_true", help='remaining christian service hours')
 parser.add_argument('--submissions', action="store_true", help='create submission time report')
 parser.add_argument('--announcements', action="store_true", help='list announcements')
 parser.add_argument('--loglevel', choices={'debug', 'info', 'warning', 'error', 'critical'}, default='error', help="Set the logging level")
@@ -67,6 +68,8 @@ elif args.calendar:
     status_list = reporter.run_calendar_report(datetime.today())
     for status in status_list:
         print("%-9s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
+elif args.service:
+    print("%1.1f hours of service still to do" % (reporter.get_remaining_service_hours()))
 elif args.all:
     print("\n=== To-day ====")
     status_list = reporter.run_daily_submission_report(args.date)

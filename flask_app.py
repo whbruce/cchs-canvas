@@ -171,7 +171,10 @@ def all():
     missing.no_items = "No missing assignments - nice work!"
     low_score, summary["low"] = run_assignment_report(reporter, SubmissionStatus.Low_Score, low_min_gain)
     being_marked, summary["being_marked"] = run_assignment_report(reporter, SubmissionStatus.Being_Marked, 0)
-    summary["gpa"] = scores_list[len(scores_list)-1].points
+    idx = len(scores_list)-1
+    summary["gpa"] = scores_list[-1].points
+    summary["wgpa"] = scores_list[-1].weighted_points
+    summary["service"] = reporter.get_remaining_service_hours()
     #late = run_assignment_report(reporter, SubmissionStatus.Late)
     #late.no_items = "Everything has been marked!"
     return render_template('all.html', student=student.capitalize(), date=date, summary=summary, scores=scores, today=today, week=week, missing=missing, low_score=low_score, being_marked=being_marked)

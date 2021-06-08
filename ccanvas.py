@@ -7,6 +7,7 @@ import wget
 import io
 import urllib
 import logging
+import re
 from enum import Enum
 from typing import NamedTuple
 from canvasapi import Canvas
@@ -248,7 +249,7 @@ class Reporter:
         self.weightings = self.get_assignments_weightings()
         for w in self.weightings:
             self.group_max[w] = 0
-        self.report = None
+        self.report = []
         self.assignments = []
 
     def load_assignments(self):
@@ -265,7 +266,7 @@ class Reporter:
                         self.assignments.append(assignment)
 
     def get_assignment(self, course_id, id):
-        print("Searching for assignment with course_id {} and id {}".format(course_id, id))
+        print("Searching {} assignments for course_id {} and id {}".format(len(self.assignments), course_id, id))
         for assignment in self.assignments:
             if assignment.course_id == course_id and assignment.id == id:
                 assignment.populate_comments()
@@ -418,9 +419,10 @@ class Reporter:
                     self.group_max[i] = points
 
 
-    def check_course_assigments(self, end_date, min_gain):
+    def check_course_assigments(self, end_date):
+        if self.report:
+            return self.report
         self.update_weightings(end_date)
-        status_list = []
         for i, assignment in enumerate(self.assignments):
             group_id = assignment.get_group()
             if assignment.is_valid and (group_id in self.group_max) and (assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date):
@@ -450,9 +452,9 @@ class Reporter:
                     #if status == SubmissionStatus.Missing:
                     #    assignment.possible_gain = -1 * possible_gain
                     self.assignments[i] = assignment
-                    status_list.append(AssignmentStatus(assignment))
+                    self.report.append(AssignmentStatus(assignment))
 
-        return status_list
+        return self.report
 
 
     def run_daily_submission_report(self, date):
@@ -470,9 +472,7 @@ class Reporter:
     def run_assignment_report(self, filter, min_gain):
         filtered_report = []
         yesterday = datetime.today().astimezone(pytz.timezone('US/Pacific')).replace(hour=0, minute=0)
-        if not self.report:
-            self.report = self.check_course_assigments(yesterday, 1)
-        for assignment in self.report:
+        for assignment in self.check_course_assigments(yesterday):
             if (assignment.status == filter):
                 filtered_report.append(assignment)
                 if (filter in [SubmissionStatus.Low_Score, SubmissionStatus.Missing]) and (min_gain > assignment.possible_gain):
@@ -509,4 +509,19 @@ class Reporter:
                         # print("%s %s %s %d" % (self.course_short_name(c.name), g.name, g.id, w))
                 self.assignment_groups[c.id] = assignment_group
         return weightings
+
+    def get_remaining_service_hours(self):
+        for course in self.courses:
+            if "Service" in course.name:
+                print(course.name)
+                results = re.findall(r'\[([A-Za-z0-9_]+)\]', course.name)
+                term = results[0]
+                print("Chrstian service term = {}".format(term))
+                assignments = course.get_assignments(order_by="due_at", include=["submission"])
+                for assignment in assignments:
+                    if term in assignment.name:
+                        expected = assignment.points_possible
+                        done = assignment.submission.get('score', 0)
+                        print("Hours = {}/{}".format(done, expected))
+                        return expected - done
 
