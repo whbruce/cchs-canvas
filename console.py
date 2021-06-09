@@ -61,7 +61,7 @@ elif args.missing:
             print("  - %s %s %s" % (comment.author, mm_dd(comment.date), comment.text))
 elif args.being_marked:
     print("\n==== Assignments Being Marked ====")
-    status_list = reporter.run_assignment_report(SubmissionStatus.Being_Marked)
+    status_list = reporter.run_assignment_report(SubmissionStatus.Being_Marked, args.min)
     for status in status_list:
         print("%-8s: %-25.25s %s %s" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date)))
 elif args.calendar:

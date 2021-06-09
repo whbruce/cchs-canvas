@@ -3,11 +3,9 @@ import os
 import datetime
 import pytz
 import json
-import wget
 import io
 import urllib
 import logging
-import re
 from enum import Enum
 from typing import NamedTuple
 from canvasapi import Canvas
@@ -15,8 +13,6 @@ from canvasapi import exceptions
 from datetime import datetime
 from datetime import timedelta
 from datetime import date as datetime_date
-import tempfile
-import pptx
 
 API_URL = "https://cchs.instructure.com"
 LOW_SCORE_THRESHOLD = 60
@@ -138,8 +134,9 @@ class Assignment:
             return False
         if self.is_submitted() and not self.is_graded():
             return True
-        if self.submission.get('submitted_at') is not None:
-            return self.submission.get('submitted_at') > self.submission.get('graded_at')
+        if self.submission.get('submitted_at'):
+            print("{} {} {}".format(self.get_name(), self.get_submission_date(), self.get_graded_date()))
+            return self.get_submission_date() > self.get_graded_date()
         else:
             return False
 
@@ -513,9 +510,7 @@ class Reporter:
     def get_remaining_service_hours(self):
         for course in self.courses:
             if "Service" in course.name:
-                print(course.name)
-                results = re.findall(r'\[([A-Za-z0-9_]+)\]', course.name)
-                term = results[0]
+                term = course.term["name"].split(' ')[0]
                 print("Chrstian service term = {}".format(term))
                 assignments = course.get_assignments(order_by="due_at", include=["submission"])
                 for assignment in assignments:
