@@ -1,3 +1,4 @@
+import time
 import json
 from flask import Flask, request
 from flask import render_template
@@ -148,6 +149,7 @@ def single_item(course_id, assignment_id):
 
 @app.route("/all")
 def all():
+    start_time = time.time()
     student = request.args.get('student')
     low_min_gain = int(request.args.get('min_gain'))
     missing_min_gain = int(request.args.get('include_zero_scores') is None)
@@ -173,6 +175,7 @@ def all():
     summary["gpa"] = scores_list[-1].points
     summary["wgpa"] = scores_list[-1].weighted_points
     summary["service"] = reporter.get_remaining_service_hours()
+    summary["time"] = int(time.time() - start_time + 0.5)
     return render_template('all.html', student=student.capitalize(), date=date, summary=summary, scores=scores, today=today, week=week, missing=missing, low_score=low_score, being_marked=being_marked)
 
 

@@ -6,6 +6,8 @@ import json
 import io
 import urllib
 import logging
+import time
+import concurrent.futures
 from enum import Enum
 from typing import NamedTuple
 from canvasapi import Canvas
@@ -13,12 +15,10 @@ from canvasapi import exceptions
 from datetime import datetime
 from datetime import timedelta
 from datetime import date as datetime_date
+import inspect
 
 API_URL = "https://cchs.instructure.com"
-LOW_SCORE_THRESHOLD = 60
-
 graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "English", "Theology", "Biology", "Physics", "Computer", "Wellness", "PE", "Support" ]
-
 
 def course_short_name(course):
     name = course if isinstance(course, str) else course.name
@@ -56,6 +56,7 @@ class Assignment:
         self.status = SubmissionStatus.Not_Submitted
         self.attempts = self.submission.get('attempt')
         self.possible_gain = 0
+        comments_loaded = 0
         self.is_valid = self.assignment.points_possible is not None \
                         and self.assignment.points_possible > 0 \
                         and self.assignment.due_at is not None \
@@ -64,13 +65,15 @@ class Assignment:
         if (self.is_valid):
             self.due_date = convert_date(self.assignment.due_at)
             self.group = assignment.assignment_group_id
-        #else:
-        #    print("Invalid: {} {} {} {}".format(self.course_name, self.assignment.name, self.assignment.points_possible, self.submission.get('excused')))
+        else:
+            self.logger.warn("Invalid assignment: {} {} {} {}".format(self.course_name, self.assignment.name, self.assignment.points_possible, self.submission.get('excused')))
 
     def populate_comments(self):
         if self.submission_comments is None:
+            print("populate_comments(): {} called from {} ".format(self.get_name(), inspect.stack()[1].function))
             self.submission_comments = []
             submission = self.assignment.get_submission(self.user, include=["submission_comments"])
+            Assignment.comments_loaded += 1
             for comment in submission.submission_comments:
                 self.submission_comments.append(Comment(comment))
 
@@ -144,6 +147,7 @@ class Assignment:
         if self.submission_date:
             return self.submission_date
         if self.submission.get('submitted_at') is None:
+            print("get_submission_date(): {} called from {} ".format(self.get_name(), inspect.stack()[1].function))
             date = None
             self.populate_comments()
             for comment in self.submission_comments:
@@ -155,11 +159,13 @@ class Assignment:
                             date = datetime.strptime(text[1], fmt)
                             self.submission_date = date.replace(year=datetime_date.today().year)
                             self.logger.info("{} submitted at {}".format(self.get_name(), self.submission_date))
+                            return self.submission_date
                         except ValueError:
                             self.logger.error("Manual submission date for {} is {}, not in mm/dd format".format(self.get_name(), text[1]))
-            return date
+            return None
         else:
-            return convert_date(self.submission.get('submitted_at'))
+            self.submission_date = convert_date(self.submission.get('submitted_at'))
+            return self.submission_date
 
     def get_graded_date(self):
         if (self.is_graded()):
@@ -170,7 +176,7 @@ class Assignment:
     def is_missing(self):
         now = datetime.today().astimezone(pytz.timezone('US/Pacific'))
         #print("is_missing: %s %s %s %s %s %s" % (self.course_name, self.assignment.name, now, self.get_due_date(), self.is_due(now)[0], self.is_submitted()))
-        return (self.submission.get('missing') and not self.get_submission_date() and (not self.is_graded() or (self.is_graded() and self.get_raw_score() == 0))) \
+        return (self.submission.get('missing') and not self.is_submitted() and (not self.is_graded() or (self.is_graded() and self.get_raw_score() == 0))) \
                or (self.is_due(now)[0] and not self.is_submitted())
 
     def is_late(self):
@@ -231,7 +237,9 @@ class Reporter:
         self.user = self.canvas.get_user('self')
         self.term = term
         if self.term is None:
+            start_time = time.time()
             self.courses = self.user.get_courses(enrollment_state="active", include=["total_scores", "term"])
+            self.logger.info("get_courses took {}s".format(time.time() - start_time))
         else:
             self.term = self.term.replace('_', ' ')
             all_courses = self.user.get_courses(include=["total_scores", "term"])
@@ -249,18 +257,39 @@ class Reporter:
         self.report = []
         self.assignments = []
 
+    def get_assignments(self, user, course):
+        assignments = []
+        course_name = self.course_short_name(course)
+        if course_name:
+            self.logger.info("Loading {} assignments".format(course_name))
+            raw_assignments = course.get_assignments(order_by="due_at", include=["submission"])
+            for a in raw_assignments:
+                assignment = Assignment(self.user, course, a)
+                # print("%s %s %s %s" % (assignment.get_due_date(), course_name, a, assignment.is_valid))
+                if assignment.is_valid:
+                    assignments.append(assignment)
+        return assignments
+
+
     def load_assignments(self):
+        start_time = time.time()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = []
+            for course in self.courses:
+                futures.append(executor.submit(self.get_assignments, user=self.user, course=course))
+            for future in concurrent.futures.as_completed(futures):
+                self.assignments.extend(future.result())
+        self.logger.info("load_assignments took {}s".format(time.time() - start_time))
+
+    def load_assignments_serial(self):
         self.assignments = []
+        start_time = time.time()
         for course in self.courses:
-            course_name = self.course_short_name(course)
-            if course_name:
-                self.logger.info("Loading {} assignments".format(course_name))
-                raw_assignments = course.get_assignments(order_by="due_at", include=["submission"])
-                for a in raw_assignments:
-                    assignment = Assignment(self.user, course, a)
-                    # print("%s %s %s %s" % (assignment.get_due_date(), course_name, a, assignment.is_valid))
-                    if assignment.is_valid:
-                        self.assignments.append(assignment)
+            #start_time = time.time()
+            assignments = self.get_assignments(self.user, course)
+            self.assignments.extend(assignments)
+            #self.logger.info("get_assignments({}) took {} {}".format(course.name, time.time(), start_time))
+        self.logger.info("load_assignments took {}s".format(time.time() - start_time))
 
     def get_assignment(self, course_id, id):
         print("Searching {} assignments for course_id {} and id {}".format(len(self.assignments), course_id, id))
@@ -439,11 +468,14 @@ class Reporter:
                     #print("%s %s %d %d %d" % (assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], possible_gain))
                     self.logger.info("{} [{}] {} {} {}".format(assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], self.group_max[assignment.group]))
                     possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / self.group_max[assignment.group])
-                    status = SubmissionStatus.Low_Score
+                    if possible_gain > 0:
+                        status = SubmissionStatus.Low_Score
                 elif assignment.is_being_marked():
                     status = SubmissionStatus.Being_Marked
                 if status:
-                    assignment.populate_comments()
+                    # assignment.populate_comments()
+                    if not assignment.submission_comments:
+                        assignment.submission_comments = []
                     assignment.status = status
                     assignment.possible_gain = possible_gain
                     #if status == SubmissionStatus.Missing:
@@ -469,7 +501,9 @@ class Reporter:
     def run_assignment_report(self, filter, min_gain):
         filtered_report = []
         yesterday = datetime.today().astimezone(pytz.timezone('US/Pacific')).replace(hour=0, minute=0)
-        for assignment in self.check_course_assigments(yesterday):
+        Assignment.comments_loaded = 0
+        assignments = self.check_course_assigments(yesterday)
+        for assignment in assignments:
             if (assignment.status == filter):
                 filtered_report.append(assignment)
                 if (filter in [SubmissionStatus.Low_Score, SubmissionStatus.Missing]) and (min_gain > assignment.possible_gain):
@@ -477,6 +511,7 @@ class Reporter:
         if filter in [SubmissionStatus.Low_Score, SubmissionStatus.Missing]:
             #reverse = filter == SubmissionStatus.Low_Score
             filtered_report.sort(key=lambda a: a.possible_gain, reverse=True)
+        print("Comments loaded {}/{}".format(Assignment.comments_loaded, len(self.assignments)))
         return filtered_report
 
 
