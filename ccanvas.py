@@ -42,6 +42,8 @@ class Comment:
         self.text = text
 
 class Assignment:
+    comments_loaded = 0
+
     def __init__(self, user, course, assignment):
         self.logger = logging.getLogger(__name__)
         self.user = user
@@ -51,12 +53,12 @@ class Assignment:
         self.id = assignment.id
         self.submission = assignment.submission
         self.submission_date = None
-        self.submission_comments = None
+        self.have_loaded_submission_comments = False
+        self.submission_comments = []
         self.due_date = None
         self.status = SubmissionStatus.Not_Submitted
         self.attempts = self.submission.get('attempt')
         self.possible_gain = 0
-        comments_loaded = 0
         self.is_valid = self.assignment.points_possible is not None \
                         and self.assignment.points_possible > 0 \
                         and self.assignment.due_at is not None \
@@ -69,10 +71,10 @@ class Assignment:
             self.logger.warn("Invalid assignment: {} {} {} {}".format(self.course_name, self.assignment.name, self.assignment.points_possible, self.submission.get('excused')))
 
     def populate_comments(self):
-        if self.submission_comments is None:
-            print("populate_comments(): {} called from {} ".format(self.get_name(), inspect.stack()[1].function))
-            self.submission_comments = []
+        if not self.have_loaded_submission_comments:
+            # print("populate_comments(): {} called from {} ".format(self.get_name(), inspect.stack()[1].function))
             submission = self.assignment.get_submission(self.user, include=["submission_comments"])
+            self.have_loaded_submission_comments = True
             Assignment.comments_loaded += 1
             for comment in submission.submission_comments:
                 self.submission_comments.append(Comment(comment))
@@ -138,7 +140,7 @@ class Assignment:
         if self.is_submitted() and not self.is_graded():
             return True
         if self.submission.get('submitted_at'):
-            print("{} {} {}".format(self.get_name(), self.get_submission_date(), self.get_graded_date()))
+            # print("{} {} {}".format(self.get_name(), self.get_submission_date(), self.get_graded_date()))
             return self.get_submission_date() > self.get_graded_date()
         else:
             return False
@@ -147,7 +149,7 @@ class Assignment:
         if self.submission_date:
             return self.submission_date
         if self.submission.get('submitted_at') is None:
-            print("get_submission_date(): {} called from {} ".format(self.get_name(), inspect.stack()[1].function))
+            # print("get_submission_date(): {} called from {} ".format(self.get_name(), inspect.stack()[1].function))
             date = None
             self.populate_comments()
             for comment in self.submission_comments:
@@ -292,12 +294,12 @@ class Reporter:
         self.logger.info("load_assignments took {}s".format(time.time() - start_time))
 
     def get_assignment(self, course_id, id):
-        print("Searching {} assignments for course_id {} and id {}".format(len(self.assignments), course_id, id))
+        self.logger.info("Searching {} assignments for course_id {} and id {}".format(len(self.assignments), course_id, id))
         for assignment in self.assignments:
             if assignment.course_id == course_id and assignment.id == id:
                 assignment.populate_comments()
                 return assignment
-        print("Assignment not found")
+        self.logger.info("Assignment not found")
         return None
 
     def course_short_name(self, course):
@@ -473,13 +475,8 @@ class Reporter:
                 elif assignment.is_being_marked():
                     status = SubmissionStatus.Being_Marked
                 if status:
-                    # assignment.populate_comments()
-                    if not assignment.submission_comments:
-                        assignment.submission_comments = []
                     assignment.status = status
                     assignment.possible_gain = possible_gain
-                    #if status == SubmissionStatus.Missing:
-                    #    assignment.possible_gain = -1 * possible_gain
                     self.assignments[i] = assignment
                     self.report.append(AssignmentStatus(assignment))
 

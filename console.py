@@ -50,8 +50,11 @@ elif args.low:
     status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score, args.min)
     for status in status_list:
         print("%-10s: %-25.25s %s %s %s %d [%d%%]" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date), mm_dd(status.graded_date), status.attempts, status.possible_gain))
-        for comment in status.submission_comments:
-            print("  - %s %s %s" % (comment.author, mm_dd(comment.date), comment.text))
+        assignment = reporter.get_assignment(status.course_id, status.id)
+        if assignment:
+            assignment.populate_comments()
+            for comment in assignment.submission_comments:
+                print("%s %s %s" % (comment.author, mm_dd(comment.date), comment.text))
 elif args.missing:
     print("\n==== Missing assignments ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Missing, 1)
@@ -99,12 +102,4 @@ else:
         state = status.status.name + " (%d%%)" % (status.score) if status.status == SubmissionStatus.Marked else status.status.name
         print("%-8s: %-25.25s [%s]" % (status.course, status.name, state))
 
-print("=== Get assignment test ===")
-assignment = reporter.get_assignment(6709, 196436)
-if assignment:
-    print("{}: {}".format(assignment.get_course_name(), assignment.get_name()))
-    for comment in assignment.submission_comments:
-        print("%s %s %s" % (comment.author, mm_dd(comment.date), comment.text))
-else:
-    print("reporter.get_assignment(6709, 196436) failed")
 
