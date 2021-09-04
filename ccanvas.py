@@ -257,10 +257,10 @@ class Reporter:
         for w in self.weightings:
             self.group_max[w] = 0
         self.report = []
-        self.assignments = []
+        self.assignments = {}
 
     def get_assignments(self, user, course):
-        assignments = []
+        assignments = {}
         course_name = self.course_short_name(course)
         if course_name:
             self.logger.info("Loading {} assignments".format(course_name))
@@ -269,7 +269,7 @@ class Reporter:
                 assignment = Assignment(self.user, course, a)
                 # print("%s %s %s %s" % (assignment.get_due_date(), course_name, a, assignment.is_valid))
                 if assignment.is_valid:
-                    assignments.append(assignment)
+                    assignments[a.id] = assignment
         return assignments
 
 
@@ -280,27 +280,27 @@ class Reporter:
             for course in self.courses:
                 futures.append(executor.submit(self.get_assignments, user=self.user, course=course))
             for future in concurrent.futures.as_completed(futures):
-                self.assignments.extend(future.result())
+                self.assignments.update(future.result())
         self.logger.info("load_assignments took {}s".format(time.time() - start_time))
 
     def load_assignments_serial(self):
-        self.assignments = []
+        self.assignments = {}
         start_time = time.time()
         for course in self.courses:
             #start_time = time.time()
             assignments = self.get_assignments(self.user, course)
-            self.assignments.extend(assignments)
+            self.assignments.update(assignments)
             #self.logger.info("get_assignments({}) took {} {}".format(course.name, time.time(), start_time))
         self.logger.info("load_assignments took {}s".format(time.time() - start_time))
 
     def get_assignment(self, course_id, id):
-        self.logger.info("Searching {} assignments for course_id {} and id {}".format(len(self.assignments), course_id, id))
-        for assignment in self.assignments:
-            if assignment.course_id == course_id and assignment.id == id:
-                assignment.populate_comments()
-                return assignment
-        self.logger.info("Assignment not found")
-        return None
+        self.logger.info("Searching {} assignments for id {}".format(len(self.assignments), id))
+        assignment = self.assignments.get(id)
+        if assignment:
+            assignment.populate_comments()
+        else:
+            self.logger.info("Assignment not found")
+        return assignment
 
     def course_short_name(self, course):
         name = course if isinstance(course, str) else course.name
@@ -380,7 +380,7 @@ class Reporter:
     def check_calendar(self, start, end):
         status_list = []
         #self.update_weightings(end)
-        for assignment in self.assignments:
+        for id, assignment in self.assignments.items():
             due_date = assignment.get_due_date()
             if (due_date > start) and (due_date < end) and assignment.get_points_possible() > 0:
                 assignment.possible_gain = assignment.get_points_possible()
@@ -390,7 +390,7 @@ class Reporter:
     def check_daily_course_submissions(self, date):
         date = date.astimezone(pytz.timezone('US/Pacific'))
         status_list = []
-        for assignment in self.assignments:
+        for id, assignment in self.assignments.items():
             is_due, is_due_on_date = assignment.is_due(date)
             # print("{} {} {}".format(assignment.get_name(), assignment.get_due_date().date(), date.date()))
             if is_due_on_date:
@@ -413,10 +413,10 @@ class Reporter:
         course_groups = {}
 
         self.logger.info("Weighting first pass")
-        for assignment in self.assignments:
+        for id, assignment in self.assignments.items():
             if assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date:
                 group_id = assignment.get_group()
-                self.logger.info(" {}[{}] = {}".format(assignment.get_course_name(), group_id, assignment.get_name()))
+                self.logger.info(" {}[{}] = {} ({})".format(assignment.get_course_name(), group_id, assignment.get_name(), id))
                 self.logger.info(" - Checking assignment")
                 self.logger.info("   - valid assignment: {}".format(assignment.is_valid))
                 self.logger.info("   - valid group: {}".format(group_id in self.group_max))
@@ -447,11 +447,11 @@ class Reporter:
                     self.group_max[i] = points
 
 
-    def check_course_assigments(self, end_date):
+    def check_course_assignments(self, end_date):
         if self.report:
             return self.report
         self.update_weightings(end_date)
-        for i, assignment in enumerate(self.assignments):
+        for id, assignment in self.assignments.items():
             group_id = assignment.get_group()
             if assignment.is_valid and (group_id in self.group_max) and (assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date):
                 status = None
@@ -477,7 +477,7 @@ class Reporter:
                 if status:
                     assignment.status = status
                     assignment.possible_gain = possible_gain
-                    self.assignments[i] = assignment
+                    self.assignments[id] = assignment
                     self.report.append(AssignmentStatus(assignment))
 
         return self.report
@@ -492,14 +492,14 @@ class Reporter:
     def run_calendar_report(self, date):
         start = date.astimezone(pytz.timezone('US/Pacific')).replace(hour=23, minute=59)
         end = start + timedelta(days=7)
-        calendar =  self.check_calendar(start, end)
+        calendar = self.check_calendar(start, end)
         return(sorted(calendar, key=lambda a: a.due_date))
 
     def run_assignment_report(self, filter, min_gain):
         filtered_report = []
         yesterday = datetime.today().astimezone(pytz.timezone('US/Pacific')).replace(hour=0, minute=0)
         Assignment.comments_loaded = 0
-        assignments = self.check_course_assigments(yesterday)
+        assignments = self.check_course_assignments(yesterday)
         for assignment in assignments:
             if (assignment.status == filter):
                 filtered_report.append(assignment)
@@ -551,4 +551,4 @@ class Reporter:
                         done = assignment.submission.get('score', 0)
                         print("Hours = {}/{}".format(done, expected))
                         return expected - done
-
+        return 20
