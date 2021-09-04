@@ -249,6 +249,8 @@ class Reporter:
             for c in all_courses:
                 if c.term.get('name') == self.term:
                     self.courses.append(c)
+        now = datetime.today().replace(tzinfo=pytz.UTC)
+        self.courses = [c for c in self.courses if convert_date(c.term["end_at"]) > now]
         self.course_dict = {}
         self.group_max = {}
         for c in self.courses:
@@ -543,7 +545,7 @@ class Reporter:
         for course in self.courses:
             if "Service" in course.name:
                 term = course.term["name"].split(' ')[0]
-                print("Chrstian service term = {}".format(term))
+                print("Christian service term = {}".format(term))
                 assignments = course.get_assignments(order_by="due_at", include=["submission"])
                 for assignment in assignments:
                     if term in assignment.name:

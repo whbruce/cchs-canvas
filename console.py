@@ -84,11 +84,11 @@ elif args.all:
     for status in status_list:
         print("%-9s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
     print("\n==== Missing assignments ====")
-    status_list = reporter.run_assignment_report(SubmissionStatus.Missing)
+    status_list = reporter.run_assignment_report(SubmissionStatus.Missing, args.min)
     for status in status_list:
         print("%-8s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
     print("\n==== Assignments with low score ====")
-    status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score)
+    status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score, args.min)
     for status in status_list[0:15]:
         print("%-8s: %-25.25s %s [%d]" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
     print("\n==== Grades ====")
