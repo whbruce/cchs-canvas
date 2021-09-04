@@ -548,7 +548,10 @@ class Reporter:
                 for assignment in assignments:
                     if term in assignment.name:
                         expected = assignment.points_possible
-                        done = assignment.submission.get('score', 0)
-                        print("Hours = {}/{}".format(done, expected))
-                        return expected - done
-        return 20
+                        if expected:
+                            done = assignment.submission.get('score')
+                            if done is None:
+                                done = 0
+                            print("Hours = {}/{}".format(done, expected))
+                            return expected - done
+        return 10
