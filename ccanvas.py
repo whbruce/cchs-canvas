@@ -18,7 +18,9 @@ from datetime import date as datetime_date
 import inspect
 
 API_URL = "https://cchs.instructure.com"
-graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "English", "Theology", "Biology", "Physics", "Computer", "Wellness", "PE", "Support" ]
+graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo/Trig", "English", "Theology", "Biology", "Physics", "Computer",
+                  "Government", "Ceramics", "Wellness", "PE", "Support" ]
+
 
 def course_short_name(course):
     name = course if isinstance(course, str) else course.name
@@ -100,7 +102,7 @@ class Assignment:
         return True
 
     def is_graded(self):
-        return self.submission.get('entered_score') is not None
+        return self.submission.get('entered_score') is not None and self.submission.get('workflow_state') != "pending_review"
 
     def get_score(self):
         if self.is_graded() and self.assignment.points_possible > 0:
@@ -212,6 +214,7 @@ class SubmissionStatus(Enum):
 
 class AssignmentStatus():
     def __init__(self, assignment):
+        self.a = assignment
         self.course_id = assignment.course_id
         self.course = assignment.course_name
         self.id = assignment.id
@@ -269,13 +272,16 @@ class Reporter:
             raw_assignments = course.get_assignments(order_by="due_at", include=["submission"])
             for a in raw_assignments:
                 assignment = Assignment(self.user, course, a)
-                # print("%s %s %s %s" % (assignment.get_due_date(), course_name, a, assignment.is_valid))
+                self.logger.info("   - name: {}".format(assignment.get_name()))
+                self.logger.info("   - last updated: {}".format(a.updated_at))
+                self.logger.info("   - submitted: {}".format(assignment.get_submission_date()))
                 if assignment.is_valid:
                     assignments[a.id] = assignment
         return assignments
 
 
     def load_assignments(self):
+        self.assignments = {}
         start_time = time.time()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = []
@@ -503,14 +509,14 @@ class Reporter:
         Assignment.comments_loaded = 0
         assignments = self.check_course_assignments(yesterday)
         for assignment in assignments:
+            # print(json.dumps(assignment.a.assignment.__dict__, default=str))
             if (assignment.status == filter):
                 filtered_report.append(assignment)
                 if (filter in [SubmissionStatus.Low_Score, SubmissionStatus.Missing]) and (min_gain > assignment.possible_gain):
                     filtered_report.pop()
         if filter in [SubmissionStatus.Low_Score, SubmissionStatus.Missing]:
-            #reverse = filter == SubmissionStatus.Low_Score
             filtered_report.sort(key=lambda a: a.possible_gain, reverse=True)
-        print("Comments loaded {}/{}".format(Assignment.comments_loaded, len(self.assignments)))
+        self.logger.info("Comments loaded {}/{}".format(Assignment.comments_loaded, len(self.assignments)))
         return filtered_report
 
 

@@ -59,18 +59,18 @@ elif args.missing:
     print("\n==== Missing assignments ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Missing, 1)
     for status in status_list:
-        print("%-8s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
+        print("%-10s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
         for comment in status.submission_comments:
             print("  - %s %s %s" % (comment.author, mm_dd(comment.date), comment.text))
 elif args.being_marked:
     print("\n==== Assignments Being Marked ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Being_Marked, args.min)
     for status in status_list:
-        print("%-8s: %-25.25s %s %s" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date)))
+        print("%-10s: %-25.25s %s %s" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date)))
 elif args.calendar:
     status_list = reporter.run_calendar_report(datetime.today())
     for status in status_list:
-        print("%-9s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
+        print("%-10s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
 elif args.service:
     print("%1.1f hours of service still to do" % (reporter.get_remaining_service_hours()))
 elif args.all:
@@ -78,28 +78,28 @@ elif args.all:
     status_list = reporter.run_daily_submission_report(args.date)
     for status in status_list:
         state = status.status.name + " (%d%%)" % (status.score) if status.status == SubmissionStatus.Marked else status.status.name
-        print("%-8s: %-25.25s [%s]" % (status.course, status.name, state))
+        print("%-10s: %-25.25s [%s]" % (status.course, status.name, state))
     print("\n=== This week ====")
     status_list = reporter.run_calendar_report(args.date)
     for status in status_list:
-        print("%-9s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
+        print("%-10s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
     print("\n==== Missing assignments ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Missing, args.min)
     for status in status_list:
-        print("%-8s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
+        print("%-10s: %-25.25s %s %d" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
     print("\n==== Assignments with low score ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score, args.min)
     for status in status_list[0:15]:
-        print("%-8s: %-25.25s %s [%d]" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
+        print("%-10s: %-25.25s %s [%d]" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
     print("\n==== Grades ====")
     scores = reporter.get_course_scores()
     for score in scores:
-        print("%-10s: %3d" % (score.course, score.score))
+        print("%-10s: %3d %1.2f %1.2f" % (score.course, score.score, score.points, score.weighted_points))
 else:
     print("\n=== Assignments due on %s ====" % (mm_dd(args.date)))
     status_list = reporter.run_daily_submission_report(args.date)
     for status in status_list:
         state = status.status.name + " (%d%%)" % (status.score) if status.status == SubmissionStatus.Marked else status.status.name
-        print("%-8s: %-25.25s [%s]" % (status.course, status.name, state))
+        print("%-10s: %-25.25s [%s]" % (status.course, status.name, state))
 
 
