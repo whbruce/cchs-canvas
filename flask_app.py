@@ -92,7 +92,7 @@ class AssignmentScoreTable(Table):
     course = Col('Course')
     #name = Col('Assignment')
     name = LinkCol('Name', 'single_item',
-                   url_kwargs=dict(course_id='course_id', assignment_id='id'), attr='name')
+                   url_kwargs=dict(assignment_id='id'), attr='name')
     due = Col(' Due ')
     submitted = Col(' Done ')
     graded = Col('Graded')
@@ -139,10 +139,10 @@ app = Flask(__name__)
 def home():
     return render_template('index.html', students = ReporterFactory.get_students())
 
-@app.route('/assignment/<int:course_id>/<int:assignment_id>')
-def single_item(course_id, assignment_id):
+@app.route('/assignment/<int:assignment_id>')
+def single_item(assignment_id):
     reporter = ReporterFactory.get()
-    assignment = reporter.get_assignment(course_id, assignment_id)
+    assignment = reporter.get_assignment(assignment_id)
     comments = to_string_table(assignment.submission_comments, CommentTable)
     comments.no_items = "No comments"
     return render_template('assignment.html', assignment = AssignmentStatus(assignment), comments = comments)
@@ -153,7 +153,6 @@ def all():
     student = request.args.get('student')
     low_min_gain = int(request.args.get('min_gain'))
     missing_min_gain = int(request.args.get('include_zero_scores') is None)
-    print(missing_min_gain, request.args.get('include_zero_scores'), missing_min_gain)
     reporter = ReporterFactory.create(student)
     reporter.load_assignments()
     summary = {}

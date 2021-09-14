@@ -19,7 +19,7 @@ import inspect
 
 API_URL = "https://cchs.instructure.com"
 graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo/Trig", "English", "Theology", "Biology", "Physics", "Computer",
-                  "Government", "Ceramics", "Wellness", "PE", "Support" ]
+                  "Government", "Financing", "Ceramics", "Wellness", "PE", "Support" ]
 
 
 def course_short_name(course):
@@ -301,7 +301,7 @@ class Reporter:
             #self.logger.info("get_assignments({}) took {} {}".format(course.name, time.time(), start_time))
         self.logger.info("load_assignments took {}s".format(time.time() - start_time))
 
-    def get_assignment(self, course_id, id):
+    def get_assignment(self, id):
         self.logger.info("Searching {} assignments for id {}".format(len(self.assignments), id))
         assignment = self.assignments.get(id)
         if assignment:
@@ -350,7 +350,7 @@ class Reporter:
             if e.course_id in self.course_dict:
                 full_name = self.course_dict[e.course_id]
                 name = self.course_short_name(full_name)
-                if name and e.grades.get('current_score'):
+                if name and e.grades.get('current_score') is not None:
                     score = int(e.grades.get('current_score') + 0.5)
                     is_honors = self.is_honors_course(full_name)
                     points = self.get_points(score, is_honors)
