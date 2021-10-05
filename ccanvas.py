@@ -178,10 +178,13 @@ class Assignment:
             return None
 
     def is_missing(self):
-        now = datetime.today().astimezone(pytz.timezone('US/Pacific'))
-        #print("is_missing: %s %s %s %s %s %s" % (self.course_name, self.assignment.name, now, self.get_due_date(), self.is_due(now)[0], self.is_submitted()))
-        return (self.submission.get('missing') and not self.is_submitted() and (not self.is_graded() or (self.is_graded() and self.get_raw_score() == 0))) \
-               or (self.is_due(now)[0] and not self.is_submitted())
+        #now = datetime.today().astimezone(pytz.timezone('US/Pacific'))
+        #due = self.is_due(now)[0]
+        marked_as_missing = self.submission.get('missing')
+        graded_as_zero = self.is_graded() and self.get_raw_score() == 0
+        print("{} {} {}".format(self.get_course_name(), self.get_name(), graded_as_zero))
+        submitted = self.is_submitted() and not graded_as_zero
+        return (marked_as_missing and not submitted) or graded_as_zero
 
     def is_late(self):
         return self.submission.get('late') and self.get_score() == 0
