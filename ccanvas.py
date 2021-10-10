@@ -181,9 +181,9 @@ class Assignment:
         #now = datetime.today().astimezone(pytz.timezone('US/Pacific'))
         #due = self.is_due(now)[0]
         marked_as_missing = self.submission.get('missing')
-        graded_as_zero = self.is_graded() and self.get_raw_score() == 0
-        print("{} {} {}".format(self.get_course_name(), self.get_name(), graded_as_zero))
-        submitted = self.is_submitted() and not graded_as_zero
+        graded_as_zero = self.is_graded() and self.get_raw_score() == 0 and self.get_attempts() == 0
+        submitted = self.is_submitted()
+        #print("{} {} {}".format(self.get_course_name(), self.get_name(), graded_as_zero))
         return (marked_as_missing and not submitted) or graded_as_zero
 
     def is_late(self):
