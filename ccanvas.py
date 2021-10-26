@@ -391,7 +391,7 @@ class Reporter:
     def check_calendar(self, start, end):
         status_list = []
         #self.update_weightings(end)
-        for id, assignment in self.assignments.items():
+        for _, assignment in self.assignments.items():
             due_date = assignment.get_due_date()
             if (due_date > start) and (due_date < end) and assignment.get_points_possible() > 0:
                 assignment.possible_gain = assignment.get_points_possible()
@@ -401,8 +401,8 @@ class Reporter:
     def check_daily_course_submissions(self, date):
         date = date.astimezone(pytz.timezone('US/Pacific'))
         status_list = []
-        for id, assignment in self.assignments.items():
-            is_due, is_due_on_date = assignment.is_due(date)
+        for _, assignment in self.assignments.items():
+            _, is_due_on_date = assignment.is_due(date)
             # print("{} {} {}".format(assignment.get_name(), assignment.get_due_date().date(), date.date()))
             if is_due_on_date:
                 if assignment.is_graded():
@@ -445,6 +445,7 @@ class Reporter:
         self.logger.info("Weighting second pass")
         for course_id in course_groups:
             group = course_groups[course_id]
+            # print("{} {}".format(course_id, group))
             if len(group) == 1:
                 for w in self.assignment_groups.get(course_id):
                     self.weightings[w] = 100
@@ -458,9 +459,15 @@ class Reporter:
                     self.group_max[i] = points
 
 
+    def get_possible_gain(self, assignment):
+        self.logger.info("{} [{}] {} {} {}".format(assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], self.group_max[assignment.group]))
+        possible_gain = 0
+        if self.group_max[assignment.group] + assignment.get_points_possible() > 0:
+            possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / (self.group_max[assignment.group] + assignment.get_points_possible()))
+        return possible_gain
+
     def check_course_assignments(self, end_date):
-        if self.report:
-            return self.report
+        self.report = []
         self.update_weightings(end_date)
         for id, assignment in self.assignments.items():
             group_id = assignment.get_group()
@@ -468,19 +475,14 @@ class Reporter:
                 status = None
                 possible_gain = 0
                 if assignment.is_missing():
-                    # print(assignment.get_name())
-                    # print(self.group_max[assignment.group])
-                    if self.group_max[assignment.group] + assignment.get_points_possible() == 0:
-                        possible_gain = 0
-                    else:
-                        possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / (self.group_max[assignment.group] + assignment.get_points_possible()))
+                    possible_gain = self.get_possible_gain(assignment)
                     status = SubmissionStatus.Missing
                 #elif assignment.is_late():
                 #    status = SubmissionStatus.Late
                 elif assignment.is_graded() and not assignment.is_being_marked():
                     #print("%s %s %d %d %d" % (assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], possible_gain))
-                    self.logger.info("{} [{}] {} {} {}".format(assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], self.group_max[assignment.group]))
                     possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / self.group_max[assignment.group])
+                    #possible_gain = self.get_possible_gain(assignment)
                     if possible_gain > 0:
                         status = SubmissionStatus.Low_Score
                 elif assignment.is_being_marked():
