@@ -130,7 +130,7 @@ def run_assignment_report(reporter, query, min_gain):
     print("run_assignment_report min_gain {}".format(min_gain))
     table = AssignmentTable
     report = reporter.run_assignment_report(query, min_gain)
-    return to_string_table(report, table), len(report)
+    return to_string_table(report, table)
 
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
@@ -155,26 +155,27 @@ def all():
     missing_min_gain = int(request.args.get('include_zero_scores') is None)
     reporter = ReporterFactory.create(student)
     reporter.load_assignments()
-    summary = {}
     scores_list = reporter.get_course_scores()
     scores = to_string_table(scores_list, CourseTable)
     date = datetime.today().astimezone(pytz.timezone('US/Pacific')).strftime("%m/%d/%y %I:%M %p")
     today_list = reporter.run_daily_submission_report(datetime.today())
     today = to_string_table(today_list, AssignmentStatusTable)
     week = to_string_table(reporter.run_calendar_report(datetime.today()), AssignmentTable)
-    todo = 0
-    for assignment in today_list:
-        if assignment.status == SubmissionStatus.Not_Submitted:
-            todo+=1
-    summary["todo"] = todo
-    missing, summary["missing"] = run_assignment_report(reporter, SubmissionStatus.Missing, missing_min_gain)
+    missing = run_assignment_report(reporter, SubmissionStatus.Missing, missing_min_gain)
     missing.no_items = "No missing assignments - nice work!"
-    low_score, summary["low"] = run_assignment_report(reporter, SubmissionStatus.Low_Score, low_min_gain)
-    being_marked, summary["being_marked"] = run_assignment_report(reporter, SubmissionStatus.Being_Marked, 0)
-    summary["gpa"] = scores_list[-1].points
-    summary["wgpa"] = scores_list[-1].weighted_points
-    summary["service"] = reporter.get_remaining_service_hours()
-    summary["time"] = int(time.time() - start_time + 0.5)
+    low_score = run_assignment_report(reporter, SubmissionStatus.Low_Score, low_min_gain)
+    being_marked = run_assignment_report(reporter, SubmissionStatus.Being_Marked, 0)
+    summary = {
+        "todo":         len(today.items),
+        "gpa":          scores_list[-1].points,
+        "wgpa":         scores_list[-1].weighted_points,
+        "service":      reporter.get_remaining_service_hours(),
+        "time":         int(time.time() - start_time + 0.5),
+        "missing":      len(missing.items),
+        "low":          len(low_score.items),
+        "being_marked": len(being_marked.items)
+    }
+
     return render_template('all.html', student=student.capitalize(), date=date, summary=summary, scores=scores, today=today, week=week, missing=missing, low_score=low_score, being_marked=being_marked)
 
 
