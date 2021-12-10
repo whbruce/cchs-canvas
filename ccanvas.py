@@ -10,6 +10,7 @@ import time
 import concurrent.futures
 from enum import Enum
 from typing import NamedTuple
+from types import SimpleNamespace
 from canvasapi import Canvas
 from canvasapi import exceptions
 from datetime import datetime
@@ -263,8 +264,8 @@ class Reporter:
             self.course_dict[c.id] = c.name
         self.weightings = self.get_assignments_weightings()
         for w in self.weightings:
+            print(w)
             self.group_max[w] = 0
-        self.report = []
         self.assignments = {}
 
     def get_assignments(self, user, course):
@@ -433,7 +434,7 @@ class Reporter:
                 self.logger.info("   - valid group: {}".format(group_id in self.group_max))
                 self.logger.info("   - graded: {}".format(assignment.is_graded()))
                 self.logger.info("   - score: {}".format(assignment.get_score()))
-                if assignment.is_valid and assignment.is_graded() and (group_id in self.group_max) and (assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date):
+                if assignment.is_graded() and (group_id in self.group_max):
                     course_id = assignment.course_id
                     if not course_id in course_groups:
                         course_groups[course_id] = []
@@ -467,7 +468,7 @@ class Reporter:
         return possible_gain
 
     def check_course_assignments(self, end_date):
-        self.report = []
+        report = []
         self.update_weightings(end_date)
         for id, assignment in self.assignments.items():
             group_id = assignment.get_group()
@@ -491,9 +492,9 @@ class Reporter:
                     assignment.status = status
                     assignment.possible_gain = possible_gain
                     self.assignments[id] = assignment
-                    self.report.append(AssignmentStatus(assignment))
+                    report.append(AssignmentStatus(assignment))
 
-        return self.report
+        return report
 
 
     def run_daily_submission_report(self, date):
