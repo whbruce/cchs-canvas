@@ -2,8 +2,8 @@ import sys
 import argparse
 import json
 from datetime import datetime
-from ccanvas import Reporter
-from ccanvas import SubmissionStatus
+from reporter import Reporter
+from assignment import SubmissionStatus
 import logging
 
 def mm_dd(date):
@@ -65,7 +65,7 @@ elif args.being_marked:
     print("\n==== Assignments Being Marked ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Being_Marked, args.min)
     for status in status_list:
-        print("%-10s: %-25.25s %s %s" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date)))
+        print("%-10s: %-25.25s %s %s %d" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date), status.possible_gain))
 elif args.calendar:
     status_list = reporter.run_calendar_report(datetime.today())
     for status in status_list:

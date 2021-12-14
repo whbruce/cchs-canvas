@@ -6,7 +6,8 @@ from flask_table import Table, Col, LinkCol
 from datetime import datetime
 import pytz
 from typing import NamedTuple
-from ccanvas import Reporter, Assignment, AssignmentStatus, SubmissionStatus
+from reporter import Reporter
+from assignment import Assignment, AssignmentStatus, SubmissionStatus
 import logging
 
 class ReporterFactory(object):
@@ -58,7 +59,6 @@ class CourseStatusString:
 
 class AssignmentStatusString:
     def __init__(self, a):
-        self.course_id = a.course_id
         self.course = a.course
         self.id = a.id
         self.name = a.name[0:25]
@@ -77,9 +77,8 @@ class CommentStatusString:
 
 class AssignmentTable(Table):
     course = Col('Course')
-    #name = Col('Assignment')
     name = LinkCol('Name', 'single_item',
-                   url_kwargs=dict(course_id='course_id', assignment_id='id'), attr='name')
+                   url_kwargs=dict(assignment_id='id'), attr='name')
     due = Col('Due')
     score = Col('Gain')
 
@@ -90,7 +89,6 @@ class AssignmentStatusTable(Table):
 
 class AssignmentScoreTable(Table):
     course = Col('Course')
-    #name = Col('Assignment')
     name = LinkCol('Name', 'single_item',
                    url_kwargs=dict(assignment_id='id'), attr='name')
     due = Col(' Due ')
@@ -115,19 +113,21 @@ class CommentTable(Table):
     text = Col('Comment')
 
 def to_string_table(assignments, layout):
+    table_entries = {
+        AssignmentScoreTable  : AssignmentStatusString,
+        AssignmentStatusTable : AssignmentStatusString,
+        AssignmentTable       : AssignmentStatusString,
+        CourseTable           : CourseStatusString,
+        AnnouncementTable     : CommentStatusString,
+        CommentTable          : CommentStatusString
+    }
+    table_entry = table_entries[layout]
     table=[]
-    if (layout in [AssignmentScoreTable, AssignmentStatusTable, AssignmentTable]):
-        entry_type = AssignmentStatusString
-    elif layout == CourseTable:
-        entry_type = CourseStatusString
-    else:
-        entry_type = CommentStatusString
-    for a in assignments:
-        table.append(entry_type(a))
+    for assignment in assignments:
+        table.append(table_entry(assignment))
     return layout(table)
 
 def run_assignment_report(reporter, query, min_gain):
-    print("run_assignment_report min_gain {}".format(min_gain))
     table = AssignmentTable
     report = reporter.run_assignment_report(query, min_gain)
     return to_string_table(report, table)
