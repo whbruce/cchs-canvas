@@ -1,4 +1,5 @@
 import logging
+import utils
 from assignment import Assignment
 
 graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo/Trig", "English", "Theology", "Biology", "Physics", "Computer",
@@ -11,12 +12,17 @@ class Course:
         self.id = self.raw.id
         self.is_honors = "Honors" in self.raw.name
         self.logger = logging.getLogger(__name__)
+        self.term = self.raw.term["name"].split(' ')[0]
         name = course if isinstance(course, str) else course.name
+
         for short_name in graded_courses:
             if short_name in name:
                 self.name = short_name
                 self.is_valid = True
 
+
+    def is_current(self, date):
+        return utils.convert_date(self.raw.term["end_at"]) > date
 
     def get_assignments(self, user):
         assignments = {}

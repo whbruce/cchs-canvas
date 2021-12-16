@@ -18,6 +18,7 @@ from datetime import timedelta
 from datetime import date as datetime_date
 from course import Course
 from assignment import Assignment, AssignmentStatus, SubmissionStatus
+from weighting import WeightedScoreCalculator
 import utils
 import inspect
 
@@ -36,88 +37,6 @@ def course_short_name(course):
 class CourseGroup(NamedTuple):
     course_id: int
 
-
-class WeightedScoreCalculator:
-
-    def __init__(self, courses):
-        self.group_max = {}
-        self.weightings = {}
-        self.assignment_groups = {}
-        self.equal_weighted_courses = []
-        self.logger = logging.getLogger(__name__)
-        for c in courses:
-            course = Course(c)
-            if course.is_valid:
-                assignment_group = []
-                groups = course.assignment_groups()
-                for g in groups:
-                    w = g.group_weight
-                    if w == 0:
-                        w = 100
-                        self.equal_weighted_courses.append(c.id)
-                    self.weightings[g.id] = w
-                    assignment_group.append(g.id)
-                    # print("%s %s %s %d" % (self.course_short_name(c.name), g.name, g.id, w))
-                self.assignment_groups[c.id] = assignment_group
-        for w in self.weightings:
-            self.group_max[w] = 0
-
-
-    # Re-calculate weightings in case some some weights are not yet in use
-    def update(self, assignments, end_date):
-        for w in self.weightings:
-            self.group_max[w] = 0
-        course_groups = {}
-
-        self.logger.info("Weighting first pass")
-        for id, assignment in assignments.items():
-            if assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date:
-                group_id = assignment.get_group()
-                self.logger.info(" {}[{}] = {} ({})".format(assignment.get_course_name(), group_id, assignment.get_name(), id))
-                self.logger.info(" - Checking assignment")
-                self.logger.info("   - valid assignment: {}".format(assignment.is_valid))
-                self.logger.info("   - valid group: {}".format(group_id in self.group_max))
-                self.logger.info("   - graded: {}".format(assignment.is_graded()))
-                self.logger.info("   - score: {}".format(assignment.get_score()))
-                if assignment.is_graded() and (group_id in self.group_max):
-                    course_id = assignment.course_id
-                    if not course_id in course_groups:
-                        course_groups[course_id] = []
-                    course_group = course_groups[course_id]
-                    if group_id not in course_group:
-                        course_group.append(group_id)
-                    self.group_max[group_id] = self.group_max[group_id] + assignment.get_points_possible()
-
-        self.logger.info("Weighting second pass")
-        for course_id in course_groups:
-            group = course_groups[course_id]
-            # print("{} {}".format(course_id, group))
-            if len(group) == 1:
-                for w in self.assignment_groups.get(course_id):
-                    self.weightings[w] = 100
-                if course_id not in self.equal_weighted_courses:
-                    self.equal_weighted_courses.append(course_id)
-            if course_id in self.equal_weighted_courses:
-                points = 0
-                for i in self.assignment_groups.get(course_id):
-                    points = points + self.group_max[i]
-                for i in self.assignment_groups.get(course_id):
-                    self.group_max[i] = points
-
-    def includes_assignment(self, assignment):
-        group_id = assignment.get_group()
-        return group_id in self.group_max
-
-    def missing_gain(self, assignment):
-        self.logger.info("Gain: {} [{}] {} {} {}".format(assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], self.group_max[assignment.group]))
-        possible_gain = 0
-        if self.group_max[assignment.group] + assignment.get_points_possible() > 0:
-            possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / (self.group_max[assignment.group] + assignment.get_points_possible()))
-        return possible_gain
-
-    def marked_gain(self, assignment):
-        possible_gain = int((self.weightings[assignment.group] * assignment.get_points_dropped()) / self.group_max[assignment.group])
-        return possible_gain
 
 
 class CourseScore(NamedTuple):
@@ -138,45 +57,33 @@ class Reporter:
         self.canvas = Canvas(API_URL, api_key)
         self.user = self.canvas.get_user('self')
         self.term = term
+        self.courses = {}
         if self.term is None:
             start_time = time.time()
-            self.courses = self.user.get_courses(enrollment_state="active", include=["total_scores", "term"])
+            for course in self.user.get_courses(enrollment_state="active", include=["total_scores", "term"]):
+                self.courses[course.id] = Course(course)
             self.logger.info("get_courses took {}s".format(time.time() - start_time))
         else:
             self.term = self.term.replace('_', ' ')
             all_courses = self.user.get_courses(include=["total_scores", "term"])
-            self.courses = []
             for c in all_courses:
                 if c.term.get('name') == self.term:
-                    self.courses.append(c)
+                    self.courses[c.id] = Course(c)
         now = datetime.today().replace(tzinfo=pytz.UTC)
-        self.courses = [c for c in self.courses if utils.convert_date(c.term["end_at"]) > now]
-        self.course_dict = {}
-        for c in self.courses:
-            self.course_dict[c.id] = Course(c)
+        for id in list(self.courses):
+            if not self.courses[id].is_current(now):
+                del self.courses[id]
         self.calculator = WeightedScoreCalculator(self.courses)
 
     def get_assignments(self, user, course):
-        course = Course(course)
         return course.get_assignments(user)
-        #if course.is_valid:
-        #    self.logger.info("Loading {} assignments".format(course.name))
-        #    raw_assignments = course.get_assignments(order_by="due_at", include=["submission"])
-        #    for a in raw_assignments:
-        #        assignment = Assignment(self.user, course, a)
-        #        self.logger.info("   - name: {}".format(assignment.get_name()))
-        #        self.logger.info("   - last updated: {}".format(a.updated_at))
-        #        self.logger.info("   - submitted: {}".format(assignment.get_submission_date()))
-        #        if assignment.is_valid:
-        #            assignments[a.id] = assignment
-        #return assignments
 
     def load_assignments(self):
         self.assignments = {}
         start_time = time.time()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = []
-            for course in self.courses:
+            for _, course in self.courses.items():
                 futures.append(executor.submit(self.get_assignments, user=self.user, course=course))
             for future in concurrent.futures.as_completed(futures):
                 self.assignments.update(future.result())
@@ -185,7 +92,7 @@ class Reporter:
     def load_assignments_serial(self):
         self.assignments = {}
         start_time = time.time()
-        for course in self.courses:
+        for _, course in self.courses.items():
             #start_time = time.time()
             assignments = self.get_assignments(self.user, course)
             self.assignments.update(assignments)
@@ -225,8 +132,8 @@ class Reporter:
         enrollments = self.user.get_enrollments(state=["current_and_concluded"])
         scores = []
         for e in enrollments:
-            if e.course_id in self.course_dict:
-                course = self.course_dict[e.course_id]
+            if e.course_id in self.courses:
+                course = self.courses[e.course_id]
                 if course.is_valid and e.grades.get('current_score') is not None:
                     score = int(e.grades.get('current_score') + 0.5)
                     points = self.get_points(score, course.is_honors)
@@ -357,16 +264,15 @@ class Reporter:
         return True
 
     def get_remaining_service_hours(self):
-        for course in self.courses:
-            if "Service" in course.name:
-                term = course.term["name"].split(' ')[0]
-                print("Christian service term = {}".format(term))
-                assignments = course.get_assignments(order_by="due_at", include=["submission"])
+        for _, course in self.courses.items():
+            if "Service" in course.raw.name:
+                print("Christian service term = {}".format(course.term))
+                assignments = course.get_assignments(self.user)
                 for assignment in assignments:
-                    if term in assignment.name:
-                        expected = assignment.points_possible
+                    if course.term in assignment.assignment.name:
+                        expected = assignment.get_points_possible()
                         if expected:
-                            done = assignment.submission.get('score')
+                            done = assignment.get_score()
                             if done is None:
                                 done = 0
                             print("Hours = {}/{}".format(done, expected))
