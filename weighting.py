@@ -4,6 +4,7 @@ import pytz
 
 @dataclass
 class AssignmentWeighting:
+    name: str
     weighting: int
     max_score: int
     score: int
@@ -14,6 +15,8 @@ class WeightedScoreCalculator:
     def __init__(self, courses):
         self.assignment_weightings = {}
         self.assignment_groups = {}
+        self.weighting_totals = {}
+        self.score_totals = {}
         self.equal_weighted_courses = []
         self.logger = logging.getLogger(__name__)
         for _, course in courses.items():
@@ -26,7 +29,7 @@ class WeightedScoreCalculator:
                         w = 100
                         if course.id not in self.equal_weighted_courses:
                             self.equal_weighted_courses.append(course.id)
-                    self.assignment_weightings[g.id] = AssignmentWeighting(w, 0, 0)
+                    self.assignment_weightings[g.id] = AssignmentWeighting(g.name, w, 0, 0)
                     assignment_group.append(g.id)
                     # print("%s %s %s %d" % (self.course_short_name(c.name), g.name, g.id, w))
                 self.assignment_groups[course.id] = assignment_group
@@ -73,6 +76,13 @@ class WeightedScoreCalculator:
                     points = points + self.assignment_weightings[gid].max_score
                 for gid in self.assignment_groups.get(course_id):
                     self.assignment_weightings[gid].max_score = points
+            total_weighting = 0
+            total_score = 0
+            for gid in groups:
+                total_weighting += self.assignment_weightings[gid].weighting
+                total_score +=  self.assignment_weightings[gid].weighting * 100 * self.assignment_weightings[gid].score / self.assignment_weightings[gid].max_score
+            self.weighting_totals[course_id] = total_weighting
+            self.score_totals[course_id] = total_score
 
     def includes_assignment(self, assignment):
         group_id = assignment.get_group()
@@ -83,10 +93,17 @@ class WeightedScoreCalculator:
         possible_gain = 0
         gid = assignment.group
         if self.assignment_weightings[gid].max_score + assignment.get_points_possible() > 0:
-            possible_gain = int((self.assignment_weightings[gid].weighting * assignment.get_points_dropped()) / (self.assignment_weightings[gid].max_score + assignment.get_points_possible()))
+            possible_gain = self.marked_gain(assignment)
+            #possible_gain = int((self.assignment_weightings[gid].weighting * assignment.get_points_dropped()) / (self.assignment_weightings[gid].max_score + assignment.get_points_possible()))
         return possible_gain
 
     def marked_gain(self, assignment):
-        possible_gain = int((self.assignment_weightings[assignment.group].weighting * assignment.get_points_dropped()) / self.assignment_weightings[assignment.group].max_score)
+        gid = assignment.group
+        course_id = assignment.course_id
+        max_score = self.assignment_weightings[gid].max_score
+        weighting = self.assignment_weightings[gid].weighting
+        weighting_total = self.weighting_totals[course_id]
+        dropped = (100 * assignment.get_points_dropped()) / max_score
+        possible_gain = int(weighting * dropped / weighting_total + 0.5)
         return possible_gain
 
