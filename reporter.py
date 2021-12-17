@@ -267,12 +267,12 @@ class Reporter:
         for _, course in self.courses.items():
             if "Service" in course.raw.name:
                 print("Christian service term = {}".format(course.term))
-                assignments = course.get_assignments(self.user)
-                for assignment in assignments:
+                assignments = course.get_assignments(self.user, get_invalid=True)
+                for _, assignment in assignments.items():
                     if course.term in assignment.assignment.name:
                         expected = assignment.get_points_possible()
                         if expected:
-                            done = assignment.get_score()
+                            done = assignment.get_raw_score()
                             if done is None:
                                 done = 0
                             print("Hours = {}/{}".format(done, expected))
