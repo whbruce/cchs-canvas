@@ -206,15 +206,13 @@ class Reporter:
             if assignment.is_valid and self.calculator.includes_assignment(assignment) and (assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date):
             #if assignment.is_valid and (group_id in self.group_max) and (assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date):
                 status = None
-                possible_gain = 0
+                possible_gain = self.calculator.gain(assignment)
                 if assignment.is_missing():
-                    possible_gain = self.calculator.missing_gain(assignment)
                     status = SubmissionStatus.Missing
                 #elif assignment.is_late():
                 #    status = SubmissionStatus.Late
                 elif assignment.is_graded() and not assignment.is_being_marked():
                     #print("%s %s %d %d %d" % (assignment.course_name, assignment.get_name(), assignment.get_points_dropped(), self.weightings[assignment.group], possible_gain))
-                    possible_gain = self.calculator.marked_gain(assignment)
                     if possible_gain > 0:
                         status = SubmissionStatus.Low_Score
                 elif assignment.is_being_marked():
