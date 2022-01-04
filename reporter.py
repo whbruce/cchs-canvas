@@ -141,14 +141,6 @@ class Reporter:
                     if course_score not in scores:
                         scores.append(course_score)
 
-        # Fixing for missing score due to Canvas error
-        if self.user_id == 5573 and self.term == "Fall 2020":
-            score = 90
-            points = self.get_points(score, False)
-            scores.append(CourseScore("Algebra", score, points[0], points[1]))
-            total_score = total_score + score
-            total_points = total_points + points[0]
-
         if scores:
             total_score = 0
             total_points = 0.0
@@ -171,11 +163,11 @@ class Reporter:
 
     def check_calendar(self, start, end):
         status_list = []
-        #self.update_weightings(end)
+        self.calculator.update(self.assignments, end)
         for _, assignment in self.assignments.items():
             due_date = assignment.get_due_date()
             if (due_date > start) and (due_date < end) and assignment.get_points_possible() > 0:
-                assignment.possible_gain = assignment.get_points_possible()
+                assignment.possible_gain = self.calculator.gain(assignment)
                 status_list.append(AssignmentStatus(assignment))
         return status_list
 
