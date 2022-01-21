@@ -44,7 +44,7 @@ class Course:
         filtered_groups = []
         for group in groups:
             valid = True
-            for name in ["Attendance", "Imported Assignments", "Extra", "Final"]:
+            for name in ["Attendance", "Imported Assignments", "Extra"]:
                 if name in group.name:
                     valid = False
                     break
@@ -52,3 +52,9 @@ class Course:
                 filtered_groups.append(group)
         return filtered_groups
 
+    def assignment_group(self, id):
+        groups = self.raw.get_assignment_groups()
+        for group in groups:
+            if group.id == id:
+                return group
+        return None
