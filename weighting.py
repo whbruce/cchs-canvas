@@ -32,12 +32,6 @@ class WeightedScoreCalculator:
                     self.logger.info("{}({}) {} {}%".format(course.name, g.name, g.id, w))
                 self.assignment_groups[course.id] = assignment_group
 
-    def get_course(self, assignment):
-        for course in self.courses.values():
-            if course.raw.id == assignment.course_id:
-                return course
-        return None
-
     # Re-calculate weightings in case some some weights are not yet in use
     def update(self, assignments, end_date):
         for gid in self.assignment_weightings:
@@ -50,28 +44,21 @@ class WeightedScoreCalculator:
             if assignment.get_due_date().astimezone(pytz.timezone('US/Pacific')) < end_date:
                 course_id = assignment.course_id
                 group_id = assignment.get_group()
+                valid_group = group_id in self.assignment_groups[assignment.course_id]
                 self.logger.info(" {}[{}] = {} ({})".format(assignment.get_course_name(), group_id, assignment.get_name(), id))
                 self.logger.info(" - Checking assignment")
                 self.logger.info("   - valid assignment: {}".format(assignment.is_valid))
-                self.logger.info("   - valid group: {}".format(group_id in self.assignment_groups[assignment.course_id]))
+                self.logger.info("   - valid group: {}".format(valid_group))
                 self.logger.info("   - graded: {}".format(assignment.is_graded()))
                 self.logger.info("   - score: {}".format(assignment.get_score()))
-                if group_id in self.assignment_weightings:
-                    if assignment.is_graded():
-                    # if assignment.is_graded() or end_date > datetime.utcnow().astimezone(pytz.timezone('US/Pacific')):
-                        if not course_id in course_groups:
-                            course_groups[course_id] = []
-                        course_group = course_groups[course_id]
-                        if group_id not in course_group:
-                            course_group.append(group_id)
-                        self.assignment_weightings[group_id].max_score += assignment.get_points_possible()
-                        self.assignment_weightings[group_id].score += assignment.get_raw_score()
-                #else:
-                #    course = self.get_course(assignment)
-                #    group = course.assignment_group(group_id)
-                #    self.assignment_weightings[group_id] = AssignmentWeighting(course.name, group.name, group.group_weight, assignment.get_points_possible(), assignment.get_raw_score())
-                #    course_groups[course_id].append(group_id)
-                #assert group_id != 28397
+                if valid_group and assignment.is_graded():
+                    if not course_id in course_groups:
+                        course_groups[course_id] = []
+                    course_group = course_groups[course_id]
+                    if group_id not in course_group:
+                        course_group.append(group_id)
+                    self.assignment_weightings[group_id].max_score += assignment.get_points_possible()
+                    self.assignment_weightings[group_id].score += assignment.get_raw_score()
 
         self.logger.info("Weighting second pass")
         for course_id in course_groups:
@@ -128,6 +115,6 @@ class WeightedScoreCalculator:
                     new_score = (self.score_totals[course_id] + weighting * 100) / weighting_total
                     possible_gain = new_score - current_score
         else:
-            self.logger.info("Assignment group not known {}[{}] = {}".format(assignment.get_course_name(), gid, assignment.get_name()))
+            self.logger.warn("Assignment group not known {}[{}] = {}".format(assignment.get_course_name(), gid, assignment.get_name()))
         return int(possible_gain + 0.5)
 
