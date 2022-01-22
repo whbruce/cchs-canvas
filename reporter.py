@@ -173,8 +173,9 @@ class Reporter:
 
     def check_daily_course_submissions(self, date):
         date = date.astimezone(pytz.timezone('US/Pacific'))
+        self.calculator.update(self.assignments, date)
         status_list = []
-        for _, assignment in self.assignments.items():
+        for assignment in self.assignments.values():
             _, is_due_on_date = assignment.is_due(date)
             # print("{} {} {}".format(assignment.get_name(), assignment.get_due_date().date(), date.date()))
             if is_due_on_date:
@@ -187,6 +188,7 @@ class Reporter:
                 else:
                     state = SubmissionStatus.Not_Submitted
                 assignment.status = state
+                assignment.possible_gain = self.calculator.gain(assignment)
                 status_list.append(AssignmentStatus(assignment))
         return status_list
 

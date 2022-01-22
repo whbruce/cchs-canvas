@@ -68,6 +68,7 @@ class AssignmentStatusString:
         self.graded = mm_dd(a.graded_date)
         self.score = int(a.possible_gain)
         self.attempts = a.attempts
+        self.possible_gain = a.possible_gain
 
 class CommentStatusString:
     def __init__(self, c):
@@ -86,6 +87,7 @@ class AssignmentStatusTable(Table):
     course = Col('Course')
     name = Col('Assignment')
     status = Col('Status')
+    possible_gain = Col('Gain')
 
 class AssignmentScoreTable(Table):
     course = Col('Course')

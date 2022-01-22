@@ -77,7 +77,7 @@ elif args.all:
     status_list = reporter.run_daily_submission_report(args.date)
     for status in status_list:
         state = status.status.name + " (%d%%)" % (status.score) if status.status == SubmissionStatus.Marked else status.status.name
-        print("%-10s: %-25.25s [%s]" % (status.course, status.name, state))
+        print("%-10s: %-25.25s [%-10.10s] %d" % (status.course, status.name, state, status.possible_gain))
     print("\n=== This week ====")
     status_list = reporter.run_calendar_report(args.date)
     for status in status_list:
@@ -95,10 +95,10 @@ elif args.all:
     for score in scores:
         print("%-10s: %3d %1.2f %1.2f" % (score.course, score.score, score.points, score.weighted_points))
 else:
-    print("\n=== Assignments due on %s ====" % (mm_dd(args.date)))
     status_list = reporter.run_daily_submission_report(args.date)
+    print("\n=== Assignments due on %s ====" % (mm_dd(args.date)))
     for status in status_list:
         state = status.status.name + " (%d%%)" % (status.score) if status.status == SubmissionStatus.Marked else status.status.name
-        print("%-10s: %-25.25s [%s]" % (status.course, status.name, state))
+        print("%-10s: %-25.25s [%-10.10s] %d" % (status.course, status.name, state, status.possible_gain))
 
 
