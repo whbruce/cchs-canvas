@@ -10,7 +10,7 @@ class Course:
         self.raw = course
         self.is_valid = False
         self.id = self.raw.id
-        self.is_honors = "Honors" in self.raw.name
+        self.is_honors = "Honors" in self.raw.name or "AP" in self.raw.name
         self.logger = logging.getLogger(__name__)
         self.term = self.raw.term["name"].split(' ')[0]
         name = course if isinstance(course, str) else course.name

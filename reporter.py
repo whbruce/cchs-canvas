@@ -24,7 +24,7 @@ import inspect
 
 API_URL = "https://cchs.instructure.com"
 graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo/Trig", "English", "Theology", "Biology", "Physics", "Computer",
-                  "Government", "Financing", "Ceramics", "Wellness", "PE", "Support" ]
+                  "Government", "Financing", "Law", "Politics", "Ceramics", "Wellness", "PE", "Support" ]
 
 
 def course_short_name(course):

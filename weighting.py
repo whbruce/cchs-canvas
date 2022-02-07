@@ -21,6 +21,7 @@ class WeightedScoreCalculator:
         self.score_totals = {}
         self.courses = courses
         self.logger = logging.getLogger(__name__)
+        self.logger.info("Weighting init")
         for course in courses.values():
             if course.is_valid:
                 assignment_group = []
@@ -29,7 +30,7 @@ class WeightedScoreCalculator:
                     w = g.group_weight
                     self.assignment_weightings[g.id] = AssignmentWeighting(course.name, g.name, w, 0, 0)
                     assignment_group.append(g.id)
-                    self.logger.info("{}({}) {} {}%".format(course.name, g.name, g.id, w))
+                    self.logger.info("{}({}) {} {} {}%".format(course.name, course.id, g.name, g.id, w))
                 self.assignment_groups[course.id] = assignment_group
 
     # Re-calculate weightings in case some some weights are not yet in use
@@ -51,14 +52,15 @@ class WeightedScoreCalculator:
                 self.logger.info("   - valid group: {}".format(valid_group))
                 self.logger.info("   - graded: {}".format(assignment.is_graded()))
                 self.logger.info("   - score: {}".format(assignment.get_score()))
-                if valid_group and assignment.is_graded():
+                if valid_group:
                     if not course_id in course_groups:
                         course_groups[course_id] = []
                     course_group = course_groups[course_id]
                     if group_id not in course_group:
                         course_group.append(group_id)
-                    self.assignment_weightings[group_id].max_score += assignment.get_points_possible()
-                    self.assignment_weightings[group_id].score += assignment.get_raw_score()
+                    if assignment.is_graded():
+                        self.assignment_weightings[group_id].max_score += assignment.get_points_possible()
+                        self.assignment_weightings[group_id].score += assignment.get_raw_score()
 
         self.logger.info("Weighting second pass")
         for course_id in course_groups:
@@ -74,7 +76,8 @@ class WeightedScoreCalculator:
                 self.logger.info("   - max score: {}".format(self.assignment_weightings[gid].max_score))
                 self.logger.info("   - weighting: {}".format(self.assignment_weightings[gid].weighting))
                 total_weighting += self.assignment_weightings[gid].weighting
-                total_score +=  self.assignment_weightings[gid].weighting * 100 * self.assignment_weightings[gid].score / self.assignment_weightings[gid].max_score
+                if self.assignment_weightings[gid].max_score > 0:
+                    total_score +=  self.assignment_weightings[gid].weighting * 100 * self.assignment_weightings[gid].score / self.assignment_weightings[gid].max_score
             self.weighting_totals[course_id] = total_weighting
             self.score_totals[course_id] = total_score
 

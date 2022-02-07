@@ -30,7 +30,7 @@ class ReporterFactory(object):
             api_key = ReporterFactory.students[student]['key']
             user_id = ReporterFactory.students[student]['id']
             ReporterFactory.current_student = student
-            ReporterFactory.instances[student] = Reporter(api_key, user_id, term=None)
+            ReporterFactory.instances[student] = Reporter(api_key, user_id, term="Spring_2022")
         return ReporterFactory.instances[student]
 
     @staticmethod
@@ -167,10 +167,12 @@ def all():
     missing.no_items = "No missing assignments - nice work!"
     low_score = run_assignment_report(reporter, SubmissionStatus.Low_Score, low_min_gain)
     being_marked = run_assignment_report(reporter, SubmissionStatus.Being_Marked, 0)
+    gpa = scores_list[-1].points if scores_list else 0
+    wgpa = scores_list[-1].weighted_points if scores_list else 0
     summary = {
         "todo":         len(today.items),
-        "gpa":          scores_list[-1].points,
-        "wgpa":         scores_list[-1].weighted_points,
+        "gpa":          gpa,
+        "wgpa":         wgpa,
         "service":      reporter.get_remaining_service_hours(),
         "time":         int(time.time() - start_time + 0.5),
         "missing":      len(missing.items),

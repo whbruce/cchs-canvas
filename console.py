@@ -90,6 +90,10 @@ elif args.all:
     status_list = reporter.run_assignment_report(SubmissionStatus.Low_Score, args.min)
     for status in status_list[0:15]:
         print("%-10s: %-25.25s %s [%d]" % (status.course, status.name, mm_dd(status.due_date), status.possible_gain))
+    print("\n==== Assignments Being Marked ====")
+    status_list = reporter.run_assignment_report(SubmissionStatus.Being_Marked, args.min)
+    for status in status_list:
+        print("%-10s: %-25.25s %s %s %d" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date), status.possible_gain))
     print("\n==== Grades ====")
     scores = reporter.get_course_scores()
     for score in scores:
