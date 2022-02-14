@@ -108,7 +108,6 @@ class WeightedScoreCalculator:
                     self.logger.info("   - assignment points dropped: {}".format(assignment.get_points_dropped()))
                     dropped = (100 * assignment.get_points_dropped()) / max_score
                     possible_gain = weighting * dropped / weighting_total
-                    return int(possible_gain + 0.5)
                 elif max_score > 0:
                     current_pct = (100 * (score)) / (max_score)
                     new_pct = (100 * (score + assignment.get_points_possible())) / (max_score + assignment.get_points_possible())
@@ -121,5 +120,6 @@ class WeightedScoreCalculator:
                     possible_gain = new_score - current_score
         else:
             self.logger.warn("Assignment group not known {}[{}] = {}".format(assignment.get_course_name(), gid, assignment.get_name()))
+        self.logger.info("   - possible gain: {}".format(int(possible_gain + 0.5)))
         return int(possible_gain + 0.5)
 
