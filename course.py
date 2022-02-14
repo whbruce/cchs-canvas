@@ -3,7 +3,7 @@ import utils
 from assignment import Assignment
 
 graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo/Trig", "English", "Theology", "Biology", "Physics", "Computer",
-                  "Government", "Financing", "Ceramics", "Wellness", "PE", "Support" ]
+                  "Government", "Financing", "Law", "Politics", "Ceramics", "Wellness", "PE", "Support" ]
 
 class Course:
     def __init__(self, course):
@@ -27,7 +27,6 @@ class Course:
     def get_assignments(self, user, get_invalid=False):
         assignments = {}
         if self.is_valid or get_invalid:
-            self.logger.info("Loading {} assignments".format(self.name))
             raw_assignments = self.raw.get_assignments(order_by="due_at", include=["submission"])
             for a in raw_assignments:
                 assignment = Assignment(user, self.name, a)

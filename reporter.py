@@ -238,10 +238,9 @@ class Reporter:
         Assignment.comments_loaded = 0
         assignments = self.check_course_assignments(yesterday)
         for assignment in assignments:
-            # print(json.dumps(assignment.a.assignment.__dict__, default=str))
             if (assignment.status == filter):
                 filtered_report.append(assignment)
-                if (filter in [SubmissionStatus.Low_Score, SubmissionStatus.Missing]) and (min_gain > assignment.possible_gain):
+                if (filter in [SubmissionStatus.Low_Score]) and (min_gain > assignment.possible_gain):
                     filtered_report.pop()
         if filter in [SubmissionStatus.Low_Score, SubmissionStatus.Missing]:
             filtered_report.sort(key=lambda a: a.possible_gain, reverse=True)
