@@ -42,8 +42,8 @@ class CourseGroup(NamedTuple):
 class CourseScore(NamedTuple):
     course: str
     score: int
-    points: float
-    weighted_points: float
+    wpoints: float
+    upoints: float
 
 # Examples
 # Physics submitted      https://cchs.instructure.com/courses/5347/assignments/160100/submissions/5573
@@ -126,7 +126,7 @@ class Reporter:
         ]
         for entry in table:
             if score >= entry[0]:
-                return entry[1] + (0.5 * is_honors), entry[2] + (0.5 * is_honors)
+                return SimpleNamespace(weighted = entry[1] + (0.5 * is_honors), unweighted = entry[2])
 
     def get_course_scores(self):
         enrollments = self.user.get_enrollments(state=["current_and_concluded"])
@@ -137,19 +137,19 @@ class Reporter:
                 if course.is_valid and e.grades.get('current_score') is not None:
                     score = int(e.grades.get('current_score') + 0.5)
                     points = self.get_points(score, course.is_honors)
-                    course_score = CourseScore(course.name, score, points[0], points[1])
+                    course_score = CourseScore(course.name, score, points.weighted, points.unweighted)
                     if course_score not in scores:
                         scores.append(course_score)
 
         if scores:
             total_score = 0
-            total_points = 0.0
-            total_weighted_points = 0.0
+            total_wpoints = 0.0
+            total_upoints = 0.0
             for score in scores:
                 total_score += score.score
-                total_points += score.points
-                total_weighted_points += score.weighted_points
-            scores.append(CourseScore("Average", int(total_score / len(scores) + 0.5), total_points / len(scores), total_weighted_points / len(scores)))
+                total_wpoints += score.wpoints
+                total_upoints += score.upoints
+            scores.append(CourseScore("Average", int(total_score / len(scores) + 0.5), total_wpoints / len(scores), total_upoints / len(scores)))
 
         return scores
 

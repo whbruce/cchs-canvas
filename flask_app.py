@@ -54,8 +54,8 @@ class CourseStatusString:
     def __init__(self, c):
         self.course = c.course
         self.score = c.score
-        self.points = int(100*c.points)/100
-        self.weighted_points = int(100*c.weighted_points)/100
+        self.wpoints = int(100*c.wpoints)/100
+        self.upoints = int(100*c.upoints)/100
 
 class AssignmentStatusString:
     def __init__(self, a):
@@ -102,8 +102,8 @@ class AssignmentScoreTable(Table):
 class CourseTable(Table):
     course = Col('Course')
     score = Col('Score')
-    points = Col('GPA')
-    weighted_points = Col('WGPA')
+    wpoints = Col('WGPA')
+    upoints = Col('UGPA')
 
 class AnnouncementTable(Table):
     due = Col('Date')
@@ -167,12 +167,12 @@ def all():
     missing.no_items = "No missing assignments - nice work!"
     low_score = run_assignment_report(reporter, SubmissionStatus.Low_Score, low_min_gain)
     being_marked = run_assignment_report(reporter, SubmissionStatus.Being_Marked, 0)
-    gpa = scores_list[-1].points if scores_list else 0
-    wgpa = scores_list[-1].weighted_points if scores_list else 0
+    wgpa = scores_list[-1].wpoints if scores_list else 0
+    ugpa = scores_list[-1].upoints if scores_list else 0
     summary = {
         "todo":         len(today.items),
-        "gpa":          gpa,
         "wgpa":         wgpa,
+        "ugpa":         ugpa,
         "service":      reporter.get_remaining_service_hours(),
         "time":         int(time.time() - start_time + 0.5),
         "missing":      len(missing.items),
