@@ -167,6 +167,7 @@ def all():
     missing.no_items = "No missing assignments - nice work!"
     low_score = run_assignment_report(reporter, SubmissionStatus.Low_Score, low_min_gain)
     being_marked = run_assignment_report(reporter, SubmissionStatus.Being_Marked, 0)
+    has_comment = run_assignment_report(reporter, SubmissionStatus.Has_Comment, 1)
     wgpa = scores_list[-1].wpoints if scores_list else 0
     ugpa = scores_list[-1].upoints if scores_list else 0
     summary = {
@@ -177,10 +178,11 @@ def all():
         "time":         int(time.time() - start_time + 0.5),
         "missing":      len(missing.items),
         "low":          len(low_score.items),
-        "being_marked": len(being_marked.items)
+        "being_marked": len(being_marked.items),
+        "has_comment":  len(has_comment.items)
     }
 
-    return render_template('all.html', student=student.capitalize(), date=date, summary=summary, scores=scores, today=today, week=week, missing=missing, low_score=low_score, being_marked=being_marked)
+    return render_template('all.html', student=student.capitalize(), date=date, summary=summary, scores=scores, today=today, week=week, missing=missing, low_score=low_score, being_marked=being_marked, has_comment=has_comment)
 
 
 

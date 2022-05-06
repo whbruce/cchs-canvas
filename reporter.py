@@ -211,6 +211,13 @@ class Reporter:
                         status = SubmissionStatus.Low_Score
                 elif assignment.is_being_marked():
                     status = SubmissionStatus.Being_Marked
+                assignment.populate_comments()
+                if assignment.submission_comments and assignment.get_score() < 100:
+                    last_comment = assignment.submission_comments[-1]
+                    if last_comment.author not in self.user.name:
+                        if not assignment.get_submission_date() or last_comment.date > assignment.get_submission_date():
+                            status = SubmissionStatus.Has_Comment
+                            # print("{} {} {}".format(last_comment.text, last_comment.date, assignment.get_score()))
                 if status:
                     assignment.status = status
                     assignment.possible_gain = possible_gain
@@ -240,7 +247,7 @@ class Reporter:
         for assignment in assignments:
             if (assignment.status == filter):
                 filtered_report.append(assignment)
-                if (filter in [SubmissionStatus.Low_Score]) and (min_gain > assignment.possible_gain):
+                if (filter in [SubmissionStatus.Low_Score, SubmissionStatus.Has_Comment]) and (min_gain > assignment.possible_gain):
                     filtered_report.pop()
         if filter in [SubmissionStatus.Low_Score, SubmissionStatus.Missing]:
             filtered_report.sort(key=lambda a: a.possible_gain, reverse=True)

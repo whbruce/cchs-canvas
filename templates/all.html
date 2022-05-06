@@ -7,6 +7,7 @@
     Your GPA is {{ '%1.2f'|format(summary.wgpa|float) }} ({{ '%1.2f'|format(summary.ugpa|float) }} unweighted)
     <br>You have {{ summary.todo }} assignments still to do to-day
     <br>You have {{ summary.missing }} missing assignments
+    <br>You have {{ summary.has_comment }} assignments with a teacher comment
     <br>You have {{ summary.low }} assignments with a low score
     <br>You have {{ summary.service }} hours of Christian service still to do
     <br>Report took {{ summary.time }}s to run
@@ -17,6 +18,8 @@
     {{ week }}
     <h2>Missing</h2>
     {{ missing }}
+    <h2>Has Teacher Comment</h2>
+    {{ has_comment }}
     <h2>Low Scores</h2>
     {{ low_score }}
     <h2>Being Marked</h2>

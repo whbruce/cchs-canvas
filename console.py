@@ -16,11 +16,12 @@ parser = argparse.ArgumentParser(description='Query Canvas')
 parser.add_argument('--student', type=str.lower, required=True, choices={"alex", "nina"}, help='student first name')
 parser.add_argument('--term', type=str, default=None, help='term (e.g. Spring 2021)')
 parser.add_argument('--date', type=datetime.fromisoformat, default=datetime.today(), help='date in ISO format')
-parser.add_argument('--low', action="store_true", help='list assigmnents with low scores')
+parser.add_argument('--low', action="store_true", help='list assignments with low scores')
 parser.add_argument('--min', type=int, default=4, help='minimum make up in low score report')
 parser.add_argument('--missing', action="store_true", help='list missing assignments')
-parser.add_argument('--being-marked', action="store_true", help='list assigments being marked')
-parser.add_argument('--attention', action="store_true", help='list assigments needing attention')
+parser.add_argument('--being-marked', action="store_true", help='list assignments being marked')
+parser.add_argument('--has-comment', action="store_true", help='list assignments with teacher comments')
+parser.add_argument('--attention', action="store_true", help='list assignments needing attention')
 parser.add_argument('--calendar', action="store_true", help='list forthcoming assignments')
 parser.add_argument('--all', action="store_true", help='check for missing assignments')
 parser.add_argument('--grades', action="store_true", help='list course scores')
@@ -64,6 +65,11 @@ elif args.missing:
 elif args.being_marked:
     print("\n==== Assignments Being Marked ====")
     status_list = reporter.run_assignment_report(SubmissionStatus.Being_Marked, args.min)
+    for status in status_list:
+        print("%-10s: %-25.25s %s %s %d" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date), status.possible_gain))
+elif args.has_comment:
+    print("\n==== Assignments Being Marked ====")
+    status_list = reporter.run_assignment_report(SubmissionStatus.Has_Comment, args.min)
     for status in status_list:
         print("%-10s: %-25.25s %s %s %d" % (status.course, status.name, mm_dd(status.due_date), mm_dd(status.submission_date), status.possible_gain))
 elif args.calendar:

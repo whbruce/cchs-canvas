@@ -192,6 +192,7 @@ class SubmissionStatus(Enum):
     Low_Score = 6
     External = 7
     Being_Marked = 8
+    Has_Comment = 9
 
 
 class AssignmentStatus():
