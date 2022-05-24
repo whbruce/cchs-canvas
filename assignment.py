@@ -43,27 +43,20 @@ class Assignment:
         self.submission_comments = []
         self.due_date = None
         self.status = SubmissionStatus.Not_Submitted
-        self.attempts = self.submission.get('attempt')
+        self.attempts = self.submission.attempt
         self.possible_gain = 0
+        for comment in self.submission.submission_comments:
+            self.submission_comments.append(Comment(comment))
         self.is_valid = self.assignment.points_possible is not None \
                         and self.assignment.points_possible > 0 \
                         and self.assignment.due_at is not None \
                         and not "Attendance" in self.assignment.name \
-                        and not self.submission.get('excused')
+                        and not self.submission.excused
         if (self.is_valid):
             self.due_date = utils.convert_date(self.assignment.due_at)
             self.group = self.assignment.assignment_group_id
         else:
-            self.logger.warn("Invalid assignment: {} {} {} {}".format(self.course_name, self.assignment.name, self.assignment.points_possible, self.submission.get('excused')))
-
-    def populate_comments(self):
-        if not self.have_loaded_submission_comments:
-            # print("populate_comments(): {} called from {} ".format(self.get_name(), inspect.stack()[1].function))
-            submission = self.assignment.get_submission(self.user, include=["submission_comments"])
-            self.have_loaded_submission_comments = True
-            Assignment.comments_loaded += 1
-            for comment in submission.submission_comments:
-                self.submission_comments.append(Comment(comment))
+            self.logger.warn("Invalid assignment: {} {} {} {}".format(self.course_name, self.assignment.name, self.assignment.points_possible, self.submission.excused))
 
     def get_course_name(self):
         return self.course_name
@@ -86,11 +79,11 @@ class Assignment:
         return True
 
     def is_graded(self):
-        return self.submission.get('entered_score') is not None and self.submission.get('workflow_state') != "pending_review"
+        return self.submission.score is not None and self.submission.workflow_state != "pending_review"
 
     def get_score(self):
         if self.is_graded() and self.assignment.points_possible > 0:
-            return (100 * self.submission.get('score')) / self.assignment.points_possible
+            return (100 * self.submission.score) / self.assignment.points_possible
         else:
             return 0
 
@@ -99,7 +92,7 @@ class Assignment:
 
     def get_points_dropped(self):
         if self.is_graded():
-            return self.assignment.points_possible - self.submission.get('score')
+            return self.assignment.points_possible - self.submission.score
         elif self.is_missing():
             return self.assignment.points_possible
         else:
@@ -107,7 +100,7 @@ class Assignment:
 
     def get_raw_score(self):
         if self.is_graded():
-            return self.submission.get('score')
+            return self.submission.score
         else:
             return 0
 
@@ -125,7 +118,7 @@ class Assignment:
             return False
         if self.is_submitted() and not self.is_graded():
             return True
-        if self.submission.get('submitted_at'):
+        if self.submission.submitted_at:
             # print("{} {} {}".format(self.get_name(), self.get_submission_date(), self.get_graded_date()))
             return self.get_submission_date() > self.get_graded_date()
         else:
@@ -134,10 +127,9 @@ class Assignment:
     def get_submission_date(self):
         if self.submission_date:
             return self.submission_date
-        if self.submission.get('submitted_at') is None:
+        if self.submission.submitted_at is None:
             # print("get_submission_date(): {} called from {} ".format(self.get_name(), inspect.stack()[1].function))
             date = None
-            self.populate_comments()
             for comment in self.submission_comments:
                 if comment.text.startswith("Submitted"):
                     text = comment.text.split(' ')
@@ -152,26 +144,26 @@ class Assignment:
                             self.logger.error("Manual submission date for {} is {}, not in mm/dd format".format(self.get_name(), text[1]))
             return None
         else:
-            self.submission_date = utils.convert_date(self.submission.get('submitted_at'))
+            self.submission_date = utils.convert_date(self.submission.submitted_at)
             return self.submission_date
 
     def get_graded_date(self):
         if (self.is_graded()):
-            return utils.convert_date(self.submission.get('graded_at'))
+            return utils.convert_date(self.submission.graded_at)
         else:
             return None
 
     def is_missing(self):
         #now = datetime.today().astimezone(pytz.timezone('US/Pacific'))
         #due = self.is_due(now)[0]
-        marked_as_missing = self.submission.get('missing')
+        marked_as_missing = self.submission.missing
         graded_as_zero = self.is_graded() and self.get_raw_score() == 0 and self.get_attempts() == 0
         submitted = self.is_submitted()
         #print("{} {} {}".format(self.get_course_name(), self.get_name(), graded_as_zero))
         return (marked_as_missing and not submitted) or graded_as_zero
 
     def is_late(self):
-        return self.submission.get('late') and self.get_score() == 0
+        return self.submission.late and self.get_score() == 0
 
     def get_group(self):
         return self.group

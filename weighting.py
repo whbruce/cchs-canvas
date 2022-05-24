@@ -30,8 +30,6 @@ class WeightedScoreCalculator:
                     w = g.group_weight
                     if w == 0:
                         w = 100
-                    if w == 100:
-                        unweighted = True
                     self.assignment_weightings[g.id] = AssignmentWeighting(course.name, g.name, w, 0, 0)
                     assignment_group.append(g.id)
                     self.logger.info("{}({}) {} {} {}%".format(course.name, course.id, g.name, g.id, w))

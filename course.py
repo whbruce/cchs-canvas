@@ -27,8 +27,21 @@ class Course:
     def get_assignments(self, user, get_invalid=False):
         assignments = {}
         if self.is_valid or get_invalid:
-            raw_assignments = self.raw.get_assignments(order_by="due_at", include=["submission"])
+            raw_assignments = self.raw.get_assignments(order_by="due_at")
+            assignment_ids = []
             for a in raw_assignments:
+                assignment_ids.append(a.id)
+            raw_submissions = self.raw.get_multiple_submissions(assignment_ids=assignment_ids, student_ids=[user.id], include=["submission_comments"])
+            submissions = {}
+            for s in raw_submissions:
+                submissions[s.assignment_id] = s
+            for a in raw_assignments:
+                submission = submissions[a.id]
+                if not hasattr(submission, "score"):
+                    setattr(submission, "score", None)
+                if not hasattr(submission, "attempt"):
+                    setattr(submission, "attempt", 0)
+                a.submission = submission
                 assignment = Assignment(user, self.name, a)
                 self.logger.info("   - name: {}".format(assignment.get_name()))
                 self.logger.info("   - last updated: {}".format(a.updated_at))

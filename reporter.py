@@ -83,7 +83,7 @@ class Reporter:
         start_time = time.time()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = []
-            for _, course in self.courses.items():
+            for course in self.courses.values():
                 futures.append(executor.submit(self.get_assignments, user=self.user, course=course))
             for future in concurrent.futures.as_completed(futures):
                 self.assignments.update(future.result())
@@ -102,10 +102,8 @@ class Reporter:
     def get_assignment(self, id):
         self.logger.info("Searching {} assignments for id {}".format(len(self.assignments), id))
         assignment = self.assignments.get(id)
-        if assignment:
-            assignment.populate_comments()
-        else:
-            self.logger.info("Assignment not found")
+        if not assignment:
+            self.logger.warn("Assignment not found")
         return assignment
 
     def get_points(self, score, is_honors):
@@ -211,7 +209,6 @@ class Reporter:
                         status = SubmissionStatus.Low_Score
                 elif assignment.is_being_marked():
                     status = SubmissionStatus.Being_Marked
-                assignment.populate_comments()
                 if assignment.submission_comments and assignment.get_score() < 100:
                     last_comment = assignment.submission_comments[-1]
                     if last_comment.author not in self.user.name:
@@ -240,6 +237,7 @@ class Reporter:
         return(sorted(calendar, key=lambda a: a.due_date))
 
     def run_assignment_report(self, filter, min_gain):
+        start_time = time.time()
         filtered_report = []
         yesterday = datetime.today().astimezone(pytz.timezone('US/Pacific')).replace(hour=0, minute=0)
         Assignment.comments_loaded = 0
@@ -252,6 +250,7 @@ class Reporter:
         if filter in [SubmissionStatus.Low_Score, SubmissionStatus.Missing]:
             filtered_report.sort(key=lambda a: a.possible_gain, reverse=True)
         self.logger.info("Comments loaded {}/{}".format(Assignment.comments_loaded, len(self.assignments)))
+        print("Time = {}".format(time.time() - start_time))
         return filtered_report
 
 
