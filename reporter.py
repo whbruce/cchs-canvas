@@ -261,17 +261,23 @@ class Reporter:
         return True
 
     def get_remaining_service_hours(self):
-        for _, course in self.courses.items():
+        default_hours = 10
+        for course in self.courses.values():
             if "Service" in course.raw.name:
-                print("Christian service term = {}".format(course.term))
+                self.logger.info("Christian service term = {}".format(course.term))
                 assignments = course.get_assignments(self.user, get_invalid=True)
                 for _, assignment in assignments.items():
                     if course.term in assignment.assignment.name:
                         expected = assignment.get_points_possible()
                         if expected:
+                            if expected > default_hours:
+                                expected = default_hours
                             done = assignment.get_raw_score()
                             if done is None:
                                 done = 0
                             print("Hours = {}/{}".format(done, expected))
-                            return expected - done
-        return 10
+                            hours_remaining =  expected - done
+                            if hours_remaining < 0:
+                                hours_remaining = 0
+                            return hours_remaining
+        return default_hours
