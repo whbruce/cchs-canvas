@@ -108,7 +108,10 @@ class WeightedScoreCalculator:
             max_score += self.assignment_weightings[group].max_score
             self.logger.info(" - {} {}".format(self.assignment_weightings[group].max_score, max_score))
         self.logger.info(" - calculation {}/{}".format(assignment.get_points_dropped(), max_score))
-        return round(100*assignment.get_points_dropped()/max_score)
+        if max_score > 0:
+            return round(100*assignment.get_points_dropped()/max_score)
+        else:
+            return 0
 
     def weighted_gain(self, assignment):
         gid = assignment.group

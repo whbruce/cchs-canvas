@@ -2,8 +2,8 @@ import logging
 import utils
 from assignment import Assignment
 
-graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo/Trig", "English", "Theology", "Biology", "Physics", "Computer",
-                  "Government", "Financing", "Law", "Politics", "Ceramics", "Wellness", "PE", "Support" ]
+graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo/Trig", "Calculus", "English", "Theology", "Biology", "Physics", "Computer",
+                  "Government", "Financing", "Law", "Politics", "Ceramics", "Wellness", "PE", "Support", "Advising", "Photography" ]
 
 class Course:
     def __init__(self, course):

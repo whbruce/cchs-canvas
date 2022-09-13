@@ -27,10 +27,10 @@ class ReporterFactory(object):
         if not student in ReporterFactory.instances:
             ReporterFactory.get_students()
             student = student.lower()
-            api_key = ReporterFactory.students[student]['key']
-            user_id = ReporterFactory.students[student]['id']
+            #api_key = ReporterFactory.students[student]['key']
+            #user_id = ReporterFactory.students[student]['id']
             ReporterFactory.current_student = student
-            ReporterFactory.instances[student] = Reporter(api_key, user_id, term="Spring_2022")
+            ReporterFactory.instances[student] = Reporter(ReporterFactory.students[student])
         return ReporterFactory.instances[student]
 
     @staticmethod

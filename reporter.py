@@ -23,21 +23,6 @@ import utils
 import inspect
 
 API_URL = "https://cchs.instructure.com"
-graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo/Trig", "English", "Theology", "Biology", "Physics", "Computer",
-                  "Government", "Financing", "Law", "Politics", "Ceramics", "Wellness", "PE", "Support" ]
-
-
-def course_short_name(course):
-    name = course if isinstance(course, str) else course.name
-    for short_name in graded_courses:
-        if short_name in name:
-            return short_name
-    return None
-
-class CourseGroup(NamedTuple):
-    course_id: int
-
-
 
 class CourseScore(NamedTuple):
     course: str
@@ -51,10 +36,10 @@ class CourseScore(NamedTuple):
 # Geometry not submitted https://cchs.instructure.com/courses/5205/assignments/159972/submissions/5573
 # Wellness no submission https://cchs.instructure.com/courses/5237/assignments/158002/submissions/5573
 class Reporter:
-    def __init__(self, api_key, user_id, term):
+    def __init__(self, config, term=None):
         self.logger = logging.getLogger(__name__)
-        self.user_id = user_id
-        self.canvas = Canvas(API_URL, api_key)
+        self.logger.info("Config: {}".format(config))
+        self.canvas = Canvas(config["url"], config["key"])
         self.user = self.canvas.get_user('self')
         self.term = term
         self.courses = {}

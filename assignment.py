@@ -45,11 +45,13 @@ class Assignment:
         self.status = SubmissionStatus.Not_Submitted
         self.attempts = self.submission.attempt
         self.possible_gain = 0
+        if self.assignment.due_at is None and "Advising" in self.course_name:
+            self.assignment.due_at = "2022-10-01T00:00:00Z"
         for comment in self.submission.submission_comments:
             self.submission_comments.append(Comment(comment))
         self.is_valid = self.assignment.points_possible is not None \
                         and self.assignment.points_possible > 0 \
-                        and self.assignment.due_at is not None \
+                        and ("Advising" in self.course_name or self.assignment.due_at is not None) \
                         and not "Attendance" in self.assignment.name \
                         and not self.submission.excused
         if (self.is_valid):

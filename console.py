@@ -13,7 +13,7 @@ def mm_dd(date):
         return "??/??"
 
 parser = argparse.ArgumentParser(description='Query Canvas')
-parser.add_argument('--student', type=str.lower, required=True, choices={"alex", "nina"}, help='student first name')
+parser.add_argument('--student', type=str.lower, required=True, choices={"alex", "alex-uo", "nina"}, help='student first name')
 parser.add_argument('--term', type=str, default=None, help='term (e.g. Spring 2021)')
 parser.add_argument('--date', type=datetime.fromisoformat, default=datetime.today(), help='date in ISO format')
 parser.add_argument('--low', action="store_true", help='list assignments with low scores')
@@ -38,7 +38,7 @@ user_id = config[args.student]['id']
 
 # print(args)
 logging.basicConfig(level=logging.getLevelName(args.loglevel.upper()))
-reporter = Reporter(api_key, user_id, args.term)
+reporter = Reporter(config[args.student], args.term)
 reporter.load_assignments()
 
 if args.grades:
@@ -103,7 +103,7 @@ elif args.all:
     print("\n==== Grades ====")
     scores = reporter.get_course_scores()
     for score in scores:
-        print("%-10s: %3d %1.2f %1.2f" % (score.course, score.score, score.points, score.weighted_points))
+        print("%-10s: %3d %1.2f %1.2f" % (score.course, score.score, score.upoints, score.wpoints))
 else:
     status_list = reporter.run_daily_submission_report(args.date)
     print("\n=== Assignments due on %s ====" % (mm_dd(args.date)))
