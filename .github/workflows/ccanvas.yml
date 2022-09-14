@@ -26,7 +26,6 @@ jobs:
         pip install -r requirements.txt
     - name: Run
       run: |
-        python console.py --student alex > alex.txt
         python console.py --student nina > nina.txt        
     - name: Upload daily report
       uses: actions/upload-artifact@v2
