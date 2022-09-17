@@ -1,21 +1,10 @@
 {
     "alex" : {
-        "url": "https://cchs.instructure.com",
-        "key" : "2817~Ikko2aFRhG18kdv8dModOpP30IpW2sPLKw5sTOwwEFHD7E9Prvj5aki8c2oAXRiV",
-        "id" : 5573
-    },
-    "alex-uo" : {
         "url": "https://community.uoregon.edu",
-        "key" : "16334~DDd2SUsMp9XGVvhYN364B5gR2LA7zzvOz7Bd6wVWXp0YgsoNWKPfk2QwqtZHaiVT",
-        "id" : 0
+        "key" : "16334~DDd2SUsMp9XGVvhYN364B5gR2LA7zzvOz7Bd6wVWXp0YgsoNWKPfk2QwqtZHaiVT"
     },
     "nina" : {
         "url": "https://cchs.instructure.com",
-        "key" : "2817~Dc95eskG3alABSPk3GrkADu4IC1JAaIFES2IwSkQEdpw9IDZQhHRO811cOz0Quj8",
-        "id" : 8497
-    },
-    "henry" : {
-        "key" : "2817~tdljhwYEfDtAQtJhe5GDw0ACh4jrBT4Zm9MUz6LAFrYEPrebelWCZX6XwQNbZWVH",
-        "id" : 1234
+        "key" : "2817~Dc95eskG3alABSPk3GrkADu4IC1JAaIFES2IwSkQEdpw9IDZQhHRO811cOz0Quj8"
     }
 }

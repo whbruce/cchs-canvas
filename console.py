@@ -33,8 +33,6 @@ args = parser.parse_args()
 
 with open('config.json') as json_file:
     config = json.load(json_file)
-api_key = config[args.student]['key']
-user_id = config[args.student]['id']
 
 # print(args)
 logging.basicConfig(level=logging.getLevelName(args.loglevel.upper()))
