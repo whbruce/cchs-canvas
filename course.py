@@ -22,7 +22,10 @@ class Course:
             self.name = "Service"
 
     def is_current(self, date):
-        return utils.convert_date(self.raw.term["end_at"]) > date
+        if self.raw.term["end_at"]:
+            return utils.convert_date(self.raw.term["end_at"]) > date
+        else:
+            return False
 
     def get_assignments(self, user, get_invalid=False):
         assignments = {}
