@@ -3,7 +3,8 @@ import utils
 from assignment import Assignment
 
 graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo/Trig", "Calculus", "English", "Theology", "Biology", "Physics", "Computer",
-                  "Government", "Financing", "Law", "Politics", "Ceramics", "Wellness", "PE", "Support", "Advising", "Photography" ]
+                  "Government", "Financing", "Law", "Politics", "Ceramics", "Wellness", "PE", "Support", "Advising", "Photography",
+                  "CINE 260M", "CS 111", "EC 201", "MATH 111" ]
 
 class Course:
     def __init__(self, course):

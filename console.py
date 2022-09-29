@@ -13,7 +13,7 @@ def mm_dd(date):
         return "??/??"
 
 parser = argparse.ArgumentParser(description='Query Canvas')
-parser.add_argument('--student', type=str.lower, required=True, choices={"alex", "alex-uo", "nina"}, help='student first name')
+parser.add_argument('--student', type=str.lower, required=True, choices={"alex-summer", "alex-fall", "nina"}, help='student first name')
 parser.add_argument('--term', type=str, default=None, help='term (e.g. Spring 2021)')
 parser.add_argument('--date', type=datetime.fromisoformat, default=datetime.today(), help='date in ISO format')
 parser.add_argument('--low', action="store_true", help='list assignments with low scores')

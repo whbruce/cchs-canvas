@@ -1,10 +1,17 @@
 {
-    "alex" : {
+    "alex-summer" : {
         "url": "https://community.uoregon.edu",
         "key" : "16334~DDd2SUsMp9XGVvhYN364B5gR2LA7zzvOz7Bd6wVWXp0YgsoNWKPfk2QwqtZHaiVT"
+    },
+    "alex-fall" : {
+        "url": "https://canvas.uoregon.edu",
+        "key" : "2391~6UBr0R9MtzBNCB4kmznCo1DcLTdlebfJHuPpaYQsV1GxSqkLc5bKyemETImf3Ti1"
     },
     "nina" : {
         "url": "https://cchs.instructure.com",
         "key" : "2817~Dc95eskG3alABSPk3GrkADu4IC1JAaIFES2IwSkQEdpw9IDZQhHRO811cOz0Quj8"
     }
 }
+
+
+
