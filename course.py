@@ -4,7 +4,9 @@ from assignment import Assignment
 
 graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo/Trig", "Calculus", "English", "Theology", "Biology", "Physics", "Computer",
                   "Government", "Financing", "Law", "Politics", "Ceramics", "Wellness", "PE", "Support", "Advising", "Photography",
-                  "CINE 260M", "CS 111", "EC 201", "MATH 111", "J 100", "J 350", "MUS 151", "MUS 227" ]
+                  "CINE 260M", "CS 111", "EC 201", "MATH 111",
+                  "J 100", "J 350", "MUS 151", "MUS 227",
+                  "PPPM 101", "GEOG 208", "LING 201" ]
 
 class Course:
     def __init__(self, course):
