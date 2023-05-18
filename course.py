@@ -60,13 +60,18 @@ class Course:
             if score >= entry[0]:
                 return SimpleNamespace(weighted = entry[1] + (0.5 * self.is_honors), unweighted = entry[2])
 
-    def get_score(self):
-        score = self.enrollment.grades.get('current_score')
-        if self.is_valid and score is not None:
-            score = int(score + 0.5)
-            grade_points = self.get_grade_points(score)
-            return CourseScore(self.name, score, grade_points.weighted, grade_points.unweighted)
-        return None
+    def get_score(self, calculator):
+        score=None
+        if self.is_valid:
+            if self.has_grade:
+                score = self.enrollment.grades.get('current_score')
+            else:
+                score=calculator.score_totals[self.id]/calculator.weighting_totals[self.id]
+            if score is not None:
+                score = int(score + 0.5)
+                grade_points = self.get_grade_points(score)
+                return CourseScore(self.name, score, grade_points.weighted, grade_points.unweighted)
+        return score
 
     def get_assignments(self, user, get_invalid=False):
         assignments = {}

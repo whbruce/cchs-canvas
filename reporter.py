@@ -86,9 +86,11 @@ class Reporter:
         return assignment
 
     def get_course_scores(self):
+        today = datetime.today().astimezone(pytz.timezone('US/Pacific'))
+        self.calculator.update(self.assignments, today)
         scores = []
         for course in self.courses.values():
-            course_score = course.get_score()
+            course_score = course.get_score(self.calculator)
             if course_score and course_score not in scores:
                 scores.append(course_score)
 

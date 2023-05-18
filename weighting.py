@@ -82,6 +82,7 @@ class WeightedScoreCalculator:
                     total_score +=  self.assignment_weightings[gid].weighting * 100 * self.assignment_weightings[gid].score / self.assignment_weightings[gid].max_score
             self.weighting_totals[course_id] = total_weighting
             self.score_totals[course_id] = total_score
+            self.logger.info("{}: total_score={}".format(course_id, self.score_totals[course_id]/self.weighting_totals[course_id]))
 
     def includes_assignment(self, assignment):
         group_id = assignment.get_group()

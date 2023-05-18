@@ -45,19 +45,21 @@ class Assignment:
         self.status = SubmissionStatus.Not_Submitted
         self.attempts = self.submission.attempt
         self.possible_gain = 0
-        if self.assignment.due_at is None and "Advising" in self.course_name:
-            self.assignment.due_at = "2022-10-01T00:00:00Z"
+        #if self.assignment.due_at is None and "Advising" in self.course_name:
+        #    self.assignment.due_at = "2022-10-01T00:00:00Z"
+        if self.assignment.due_at is not None:
+            self.due_date = utils.convert_date(self.assignment.due_at)
+        elif self.assignment.lock_at is not None:
+            self.due_date = utils.convert_date(self.assignment.lock_at)
+        self.group = self.assignment.assignment_group_id
         for comment in self.submission.submission_comments:
             self.submission_comments.append(Comment(comment))
         self.is_valid = self.assignment.points_possible is not None \
                         and self.assignment.points_possible > 0 \
-                        and ("Advising" in self.course_name or self.assignment.due_at is not None) \
-                        and not "Attendance" in self.assignment.name \
-                        and not self.submission.excused
-        if (self.is_valid):
-            self.due_date = utils.convert_date(self.assignment.due_at)
-            self.group = self.assignment.assignment_group_id
-        else:
+                        and self.due_date is not None \
+                        and not self.submission.excused \
+
+        if not self.is_valid:
             self.logger.warn("Invalid assignment: {} {} {} {}".format(self.course_name, self.assignment.name, self.assignment.points_possible, self.submission.excused))
 
     def get_course_name(self):
