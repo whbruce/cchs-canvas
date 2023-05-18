@@ -11,24 +11,15 @@ import concurrent.futures
 from enum import Enum
 from typing import NamedTuple
 from types import SimpleNamespace
-from canvasapi import Canvas
-from canvasapi import exceptions
+from canvasapi import Canvas, exceptions
 from datetime import datetime
 from datetime import timedelta
 from datetime import date as datetime_date
-from course import Course
+from course import Course, CourseScore
 from assignment import Assignment, AssignmentStatus, SubmissionStatus
 from weighting import WeightedScoreCalculator
 import utils
 import inspect
-
-API_URL = "https://cchs.instructure.com"
-
-class CourseScore(NamedTuple):
-    course: str
-    score: int
-    wpoints: float
-    upoints: float
 
 # Examples
 # Physics submitted      https://cchs.instructure.com/courses/5347/assignments/160100/submissions/5573
@@ -43,10 +34,13 @@ class Reporter:
         self.user = self.canvas.get_user('self')
         self.term = term
         self.courses = {}
+        enrollments = self.user.get_enrollments(state=["current_and_concluded"])
         if self.term is None:
             start_time = time.time()
             for course in self.user.get_courses(enrollment_state="active", include=["total_scores", "term"]):
-                self.courses[course.id] = Course(course)
+                enrollment_result = [e for e in enrollments if e.course_id == course.id]
+                enrollment = enrollment_result[0] if enrollment_result else None
+                self.courses[course.id] = Course(course, enrollment)
             self.logger.info("get_courses took {}s".format(time.time() - start_time))
         else:
             self.term = self.term.replace('_', ' ')
@@ -91,38 +85,12 @@ class Reporter:
             self.logger.warn("Assignment not found")
         return assignment
 
-    def get_points(self, score, is_honors):
-        table  = [
-            (97, 4.30, 4),
-            (93, 4.00, 4),
-            (90, 3.70, 4),
-            (87, 3.30, 3),
-            (83, 3.00, 3),
-            (80, 2.70, 3),
-            (77, 2.30, 2),
-            (73, 2.00, 2),
-            (70, 1.70, 2),
-            (67, 1.30, 1),
-            (63, 1.00, 1),
-            (60, 0.70, 1),
-            (0,  0.0, 0)
-        ]
-        for entry in table:
-            if score >= entry[0]:
-                return SimpleNamespace(weighted = entry[1] + (0.5 * is_honors), unweighted = entry[2])
-
     def get_course_scores(self):
-        enrollments = self.user.get_enrollments(state=["current_and_concluded"])
         scores = []
-        for e in enrollments:
-            if e.course_id in self.courses:
-                course = self.courses[e.course_id]
-                if course.is_valid and e.grades.get('current_score') is not None:
-                    score = int(e.grades.get('current_score') + 0.5)
-                    points = self.get_points(score, course.is_honors)
-                    course_score = CourseScore(course.name, score, points.weighted, points.unweighted)
-                    if course_score not in scores:
-                        scores.append(course_score)
+        for course in self.courses.values():
+            course_score = course.get_score()
+            if course_score and course_score not in scores:
+                scores.append(course_score)
 
         if scores:
             total_score = 0

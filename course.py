@@ -1,5 +1,7 @@
 import logging
 import utils
+from types import SimpleNamespace
+from typing import NamedTuple
 from assignment import Assignment
 
 graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo/Trig", "Calculus", "English", "Theology", "Biology", "Physics", "Computer",
@@ -8,14 +10,22 @@ graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo
                   "J 100", "J 350", "MUS 151", "MUS 227",
                   "PPPM 101", "GEOG 208", "LING 201" ]
 
+class CourseScore(NamedTuple):
+    course: str
+    score: int
+    wpoints: float
+    upoints: float
+
 class Course:
-    def __init__(self, course):
+    def __init__(self, course, enrollment):
         self.raw = course
+        self.enrollment=enrollment
         self.is_valid = False
         self.id = self.raw.id
         self.is_honors = "Honors" in self.raw.name or "AP" in self.raw.name
         self.logger = logging.getLogger(__name__)
         self.term = self.raw.term["name"].split(' ')[0]
+        self.has_grade = not self.raw.hide_final_grades
         name = course if isinstance(course, str) else course.name
         for short_name in graded_courses:
             if short_name in name:
@@ -29,6 +39,34 @@ class Course:
             return utils.convert_date(self.raw.term["end_at"]) > date
         else:
             return False
+
+    def get_grade_points(self, score):
+        table  = [
+            (97, 4.30, 4),
+            (93, 4.00, 4),
+            (90, 3.70, 4),
+            (87, 3.30, 3),
+            (83, 3.00, 3),
+            (80, 2.70, 3),
+            (77, 2.30, 2),
+            (73, 2.00, 2),
+            (70, 1.70, 2),
+            (67, 1.30, 1),
+            (63, 1.00, 1),
+            (60, 0.70, 1),
+            (0,  0.0, 0)
+        ]
+        for entry in table:
+            if score >= entry[0]:
+                return SimpleNamespace(weighted = entry[1] + (0.5 * self.is_honors), unweighted = entry[2])
+
+    def get_score(self):
+        score = self.enrollment.grades.get('current_score')
+        if self.is_valid and score is not None:
+            score = int(score + 0.5)
+            grade_points = self.get_grade_points(score)
+            return CourseScore(self.name, score, grade_points.weighted, grade_points.unweighted)
+        return None
 
     def get_assignments(self, user, get_invalid=False):
         assignments = {}
