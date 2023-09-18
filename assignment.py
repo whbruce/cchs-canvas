@@ -45,8 +45,6 @@ class Assignment:
         self.status = SubmissionStatus.Not_Submitted
         self.attempts = self.submission.attempt
         self.possible_gain = 0
-        #if self.assignment.due_at is None and "Advising" in self.course_name:
-        #    self.assignment.due_at = "2022-10-01T00:00:00Z"
         if self.assignment.due_at is not None:
             self.due_date = utils.convert_date(self.assignment.due_at)
         elif self.assignment.lock_at is not None:

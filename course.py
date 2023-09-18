@@ -5,7 +5,7 @@ from typing import NamedTuple
 from assignment import Assignment
 
 graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo/Trig", "Calculus", "English", "Theology", "Biology", "Physics", "Computer",
-                  "Government", "Financing", "Law", "Politics", "Ceramics", "Wellness", "PE", "Support", "Advising", "Photography",
+                  "Government", "Financing", "Law", "Politics", "Ceramics", "Wellness", "PE", "Support", "Advising", "Photography", "Statistics", "STEM",
                   "CINE 260M", "CS 111", "EC 201", "MATH 111",
                   "J 100", "J 350", "MUS 151", "MUS 227",
                   "PPPM 101", "GEOG 208", "LING 201" ]
@@ -70,6 +70,9 @@ class Course:
             if score is not None:
                 score = int(score + 0.5)
                 grade_points = self.get_grade_points(score)
+                name = self.name
+                if self.has_grade:
+                    name += " *"
                 return CourseScore(self.name, score, grade_points.weighted, grade_points.unweighted)
         return score
 
