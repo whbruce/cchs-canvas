@@ -8,7 +8,8 @@ graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo
                   "Government", "Financing", "Law", "Politics", "Ceramics", "Wellness", "PE", "Support", "Advising", "Photography", "Statistics", "STEM",
                   "CINE 260M", "CS 111", "EC 201", "MATH 111",
                   "J 100", "J 350", "MUS 151", "MUS 227",
-                  "PPPM 101", "GEOG 208", "LING 201" ]
+                  "PPPM 101", "GEOG 208", "LING 201",
+                  "ANTH 110", "ARTD 251", "MUS 151" ]
 
 class CourseScore(NamedTuple):
     course: str
