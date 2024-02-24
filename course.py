@@ -5,11 +5,12 @@ from typing import NamedTuple
 from assignment import Assignment
 
 graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo/Trig", "Calculus", "English", "Theology", "Biology", "Physics", "Computer",
-                  "Government", "Financing", "Law", "Politics", "Ceramics", "Wellness", "PE", "Support", "Advising", "Photography", "Statistics", "STEM",
+                  "Government", "Financing", "Law", "Politics", "Ceramics", "Wellness", "Photography", "Statistics", "STEM", "Environment",
                   "CINE 260M", "CS 111", "EC 201", "MATH 111",
                   "J 100", "J 350", "MUS 151", "MUS 227",
                   "PPPM 101", "GEOG 208", "LING 201",
-                  "ANTH 110", "ARTD 251", "MUS 151" ]
+                  "ANTH 110", "ARTD 251", "MUS 151",
+                  "CRWR 230", "HUM 102", "PEL 399"  ]
 
 class CourseScore(NamedTuple):
     course: str
