@@ -4,14 +4,16 @@ from types import SimpleNamespace
 from typing import NamedTuple
 from assignment import Assignment
 
-graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo/Trig", "Calculus", "English", "Theology", "Biology", "Physics", "Computer",
-                  "Government", "Financing", "Law", "Politics", "Ceramics", "Wellness", "Photography", "Statistics", "STEM", "Environment",
-                  "CINE 260M", "CS 111", "EC 201", "MATH 111",
+# graded_courses = ["History", "Spanish", "Chemistry", "Algebra", "Geometry", "Geo/Trig", "Calculus", "English", "Theology", "Biology", "Physics", "Computer",
+#                   "Government", "Financing", "Law", "Politics", "Ceramics", "Wellness", "Photography", "Statistics", "STEM", "Environment",
+
+graded_courses = [ "CINE 260M", "CS 111", "EC 201", "MATH 111",
                   "J 100", "J 350", "MUS 151", "MUS 227",
                   "PPPM 101", "GEOG 208", "LING 201",
                   "ANTH 110", "ARTD 251", "MUS 151",
                   "CRWR 230", "HUM 102", "PEL 399",
-                  "GEOG 1400", "WRTG 2010", "GEO 1100", "MATH 1060"  ]
+                  "GEOG 1400", "WRTG 2010", "GEO 1100", "MATH 1060",
+                  "CHEM 1210", "CHEM 1215", "ART 1020", "GEO 1030", "MATH 1210" ]
 
 class CourseScore(NamedTuple):
     course: str
@@ -30,12 +32,15 @@ class Course:
         self.term = self.raw.term["name"].split(' ')[0]
         self.has_grade = not self.raw.hide_final_grades
         name = course if isinstance(course, str) else course.name
+        self.name = None
         for short_name in graded_courses:
             if short_name in name:
                 self.name = short_name
                 self.is_valid = True
         if "Service" in name:
             self.name = "Service"
+        if not self.name:
+            self.name = name
 
     def is_current(self, date):
         if self.raw.term["end_at"]:

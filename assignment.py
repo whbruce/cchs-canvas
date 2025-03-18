@@ -143,7 +143,7 @@ class Assignment:
                             self.logger.info("{} submitted at {}".format(self.get_name(), self.submission_date))
                             return self.submission_date
                         except ValueError:
-                            self.logger.error("Manual submission date for {} is {}, not in mm/dd format".format(self.get_name(), text[1]))
+                            self.logger.warning("Manual submission date for {} is {}, not in mm/dd format. Ignored".format(self.get_name(), text[1]))
             return None
         else:
             self.submission_date = utils.convert_date(self.submission.submitted_at)
