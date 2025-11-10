@@ -40,7 +40,7 @@ class Reporter:
             for course in self.user.get_courses(enrollment_state="active", include=["total_scores", "term"]):
                 enrollment_result = [e for e in enrollments if e.course_id == course.id]
                 enrollment = enrollment_result[0] if enrollment_result else None
-                # print(f"{course.id}, {course.name}, {course.term['name']}, {enrollment.grades.get('current_score')}")
+                #print(f"{course.id}, {course.name}, {course.term['name']}, {enrollment.grades.get('current_score')}")
                 self.courses[course.id] = Course(course, enrollment)
         else:
             self.term = self.term.replace('_', ' ')
@@ -50,8 +50,6 @@ class Reporter:
                     self.courses[c.id] = Course(c)
         self.logger.info("get_courses took {}s".format(time.time() - start_time))
         now = datetime.today().replace(tzinfo=pytz.UTC)
-        if "utah" in config["url"]:
-            now += timedelta(weeks=52)
         for id in list(self.courses):
             if not self.courses[id].is_current(now):
                 del self.courses[id]
