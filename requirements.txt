@@ -1,5 +1,5 @@
 pytz==2023.3
 canvasapi==3.0.0
 Flask_Table==0.5.0
-Markdown==3.2.2
+Markdown==3.8.1
 Flask==2.3.2
